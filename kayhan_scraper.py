@@ -1,12 +1,6 @@
-import requests
 from bs4 import BeautifulSoup
-import pandas as pd
-import time
-import os
-from openpyxl import load_workbook
 from datetime import datetime
 import jdatetime
-import re
 
 COLUMNS = ['Title', 'Link', 'Image', 'Description', 'Time', 'Gregorian_Date', 'Scraped_Date', 'Page', 'Subject', 'Full_Text']
 
@@ -55,35 +49,6 @@ def convert_persian_to_gregorian(persian_date_str):
     except Exception as e:
         # print(f"Error converting date '{persian_date_str}': {e}")
         return ""
-
-def get_existing_ids(file_path):
-    if not os.path.exists(file_path):
-        return set()
-    try:
-        df = pd.read_excel(file_path)
-        if 'Page' in df.columns:
-            return set(df['Page'].tolist())
-        elif 'Page ID' in df.columns:
-             return set(df['Page ID'].tolist())
-        return set()
-    except Exception as e:
-        print(f"هشدار: نتوانست فایل موجود را بخواند ({e}). فرض بر این است که فایل خالی است.")
-        return set()
-
-def append_to_excel(file_path, data_dict):
-    if not os.path.exists(file_path):
-        df = pd.DataFrame([data_dict], columns=COLUMNS)
-        df.to_excel(file_path, index=False)
-    else:
-        try:
-            wb = load_workbook(file_path)
-            ws = wb.active
-            row_values = [data_dict.get(col) for col in COLUMNS]
-            ws.append(row_values)
-            wb.save(file_path)
-            wb.close()
-        except Exception as e:
-            print(f"خطا در ذخیره ردیف در اکسل: {e}")
 
 def parse_html(html_content, page_id, url):
     """
@@ -166,57 +131,3 @@ def parse_html(html_content, page_id, url):
     except Exception as e:
         print(f"Error parsing page {page_id}: {e}")
         return None
-
-def scrape_kayhan_news(start_page=1, output_file='kayhan_news.xlsx'):
-    processed_ids = get_existing_ids(output_file)
-    print(f"تعداد اخبار موجود در فایل: {len(processed_ids)}")
-    
-    current_page = start_page
-    consecutive_errors = 0
-    MAX_CONSECUTIVE_ERRORS = 100
-    
-    print(f"شروع استخراج اطلاعات از صفحه {start_page}...")
-    
-    while consecutive_errors < MAX_CONSECUTIVE_ERRORS:
-        if current_page in processed_ids:
-            current_page += 1
-            continue
-
-        url = f"https://kayhan.ir/fa/news/{current_page}"
-        
-        try:
-            response = requests.get(url, timeout=15)
-            
-            if response.status_code != 200:
-                print(f"خطا در دریافت صفحه {current_page}: Status Code {response.status_code}")
-                consecutive_errors += 1
-                current_page += 1
-                continue
-            
-            data = parse_html(response.text, current_page, url)
-            
-            if data == "404":
-                 consecutive_errors += 1
-                 print(f"صفحه {current_page} موجود نیست. (تعداد خطاهای متوالی: {consecutive_errors})")
-            elif data:
-                 consecutive_errors = 0
-                 append_to_excel(output_file, data)
-                 processed_ids.add(current_page)
-                 print(f"صفحه {current_page} ذخیره شد: {data['Title'][:30]}... (تاریخ: {data['Gregorian_Date']})")
-            else:
-                 # Empty content but page loaded
-                 print(f"صفحه {current_page} محتوای خبری نداشت.")
-                 
-        except Exception as e:
-            print(f"خطای سیستمی در صفحه {current_page}: {e}")
-        
-        current_page += 1
-    
-    print("پایان استخراج.")
-
-if __name__ == "__main__":
-    while True:
-        print("Starting scraping cycle...")
-        scrape_kayhan_news(start_page=1)
-        print("Cycle finished. Waiting 6 hours before next run...")
-        time.sleep(6 * 60 * 60)

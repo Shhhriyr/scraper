@@ -1,26 +1,7 @@
-import requests
 from bs4 import BeautifulSoup
-import pandas as pd
-import time
-import argparse
-import os
 from datetime import datetime
 
 COLUMNS = ['Title', 'Link', 'Image', 'Description', 'Time', 'Gregorian_Date', 'Scraped_Date', 'Page', 'Subject', 'Full_Text']
-
-def get_last_page_id(file_path):
-    if os.path.exists(file_path):
-        try:
-            df = pd.read_excel(file_path)
-            if not df.empty:
-                if 'Page' in df.columns:
-                    return int(df['Page'].max())
-                # Fallback for old column name
-                elif 'page_id' in df.columns:
-                    return int(df['page_id'].max())
-        except Exception as e:
-            print(f"Error reading existing file: {e}")
-    return None
 
 def parse_html(html_content, page_id, url):
     """
@@ -87,87 +68,3 @@ def parse_html(html_content, page_id, url):
     except Exception as e:
         print(f"Page {page_id}: Error parsing - {e}")
         return None
-
-def scrape_page(page_id):
-    url = f"https://www.hamshahrionline.ir/news/{page_id}"
-    try:
-        response = requests.get(url, timeout=10)
-        if response.status_code != 200:
-            print(f"Page {page_id}: HTTP {response.status_code}")
-            return None
-            
-        data = parse_html(response.text, page_id, url)
-        if data:
-             print(f"Page {page_id}: Scraped successfully - {str(data['Title'])[:30]}...")
-        return data
-
-    except Exception as e:
-        print(f"Page {page_id}: Error - {e}")
-        return None
-
-def main():
-    parser = argparse.ArgumentParser(description="Scrape Hamshahri Online news.")
-    parser.add_argument("--start", type=int, default=1, help="Starting page ID")
-    parser.add_argument("--count", type=int, default=50, help="Number of pages to scrape per batch")
-    parser.add_argument("--output", type=str, default="hamshahri_news.xlsx", help="Output Excel file")
-    parser.add_argument("--no-loop", action="store_true", help="Disable continuous scraping")
-    
-    args = parser.parse_args()
-    loop_mode = not args.no_loop
-    
-    while True:
-        last_id = get_last_page_id(args.output)
-        if last_id is not None:
-            start_page = last_id + 1
-            print(f"Found existing data. Resuming from page {start_page}...")
-        else:
-            start_page = args.start
-            print(f"No existing data found. Starting from {start_page}...")
-        
-        results = []
-        end_page = start_page + args.count
-        
-        print(f"Scraping {args.count} pages starting from {start_page}...")
-        
-        for page_id in range(start_page, end_page):
-            data = scrape_page(page_id)
-            if data:
-                results.append(data)
-            time.sleep(0.5)
-            
-        if results:
-            new_df = pd.DataFrame(results)
-            # Reorder columns to match COLUMNS definition
-            new_df = new_df[COLUMNS]
-            
-            if os.path.exists(args.output):
-                try:
-                    existing_df = pd.read_excel(args.output)
-                    updated_df = pd.concat([existing_df, new_df], ignore_index=True)
-                    
-                    # Drop duplicates based on 'Page' column
-                    if 'Page' in updated_df.columns:
-                        updated_df.drop_duplicates(subset=['Page'], keep='last', inplace=True)
-                    elif 'page_id' in updated_df.columns:
-                         # Handle legacy column name if present
-                         updated_df.drop_duplicates(subset=['page_id'], keep='last', inplace=True)
-                         
-                except Exception as e:
-                    print(f"Error reading existing Excel file: {e}. Creating new one.")
-                    updated_df = new_df
-            else:
-                updated_df = new_df
-                
-            updated_df.to_excel(args.output, index=False)
-            print(f"Saved {len(results)} new records to {args.output}. Total records: {len(updated_df)}")
-        else:
-            print("No new data found in this batch.")
-            
-        if not loop_mode:
-            break
-            
-        print("Batch finished. Waiting 1 hours for the next run...")
-        time.sleep(1 * 3600)
-
-if __name__ == "__main__":
-    main()
