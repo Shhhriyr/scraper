@@ -1,90 +1,90 @@
-# Persian News Scraper
+# اسکرپر اخبار فارسی
 
-This repository contains a unified web scraper for various Iranian news websites and Wikipedia.
+این مخزن شامل یک ابزار جامع برای استخراج داده (Web Scraper) از وب‌سایت‌های خبری مختلف ایران و ویکی‌پدیا است.
 
-## Supported Websites
+## وب‌سایت‌های پشتیبانی شده
 
-1.  **Hamshahri Online** (`--hamshahri_scraper`)
-2.  **Kayhan** (`--kayhan_scraper`)
-3.  **Ettelaat** (`--ettelaat_scraper`)
-4.  **Asia News** (`--asianews_scraper`)
-5.  **Wikipedia (Persian)** (`--wiki_scraper`)
+1.  **همشهری آنلاین** (`--hamshahri_scraper`)
+2.  **کیهان** (`--kayhan_scraper`)
+3.  **اطلاعات** (`--ettelaat_scraper`)
+4.  **آسیا نیوز** (`--asianews_scraper`)
+5.  **ویکی‌پدیای فارسی** (`--wiki_scraper`)
 
-## Prerequisites
+## پیش‌نیازها
 
 *   Python 3.8+
-*   See `requirements.txt` for python dependencies.
+*   وابستگی‌های پایتون موجود در `requirements.txt`.
 
-## Installation
+## نصب
 
-1.  Clone the repository:
+1.  کلون کردن مخزن:
     ```bash
-    git clone <repository_url>
+    git clone https://github.com/Shhhriyr/scraper.git
     cd scraper
     ```
 
-2.  Install dependencies:
+2.  نصب وابستگی‌ها:
     ```bash
     pip install -r requirements.txt
     ```
 
-## Usage
+## نحوه استفاده
 
-Run `scraper.py` with the desired flag.
+فایل `scraper.py` را با پرچم (Flag) مورد نظر اجرا کنید.
 
-### Common Arguments
+### آرگومان‌های عمومی
 
-*   `--workers`: Number of parallel threads (default: 5).
-*   `--output`: Custom output filename (e.g., `my_data.xlsx`).
+*   `--workers`: تعداد تردها (Thread) برای پردازش موازی (پیش‌فرض: ۵).
+*   `--output`: نام فایل خروجی (مثلاً `my_data.xlsx`).
 
-### 1. Hamshahri Scraper
-Scrapes news pages by ID.
+### ۱. اسکرپر همشهری
+استخراج اخبار بر اساس شناسه (ID) صفحه.
 
 ```bash
 python scraper.py --hamshahri_scraper --start 1000 --count 50
 ```
-*   `--start`: Starting Page ID.
-*   `--count`: Number of pages to check.
+*   `--start`: شناسه صفحه شروع.
+*   `--count`: تعداد صفحاتی که باید بررسی شوند.
 
-### 2. Kayhan Scraper
-Scrapes news pages by ID.
+### ۲. اسکرپر کیهان
+استخراج اخبار بر اساس شناسه صفحه.
 
 ```bash
 python scraper.py --kayhan_scraper --start 1 --count 20
 ```
 
-### 3. Ettelaat Scraper
-Scrapes archives by date.
+### ۳. اسکرپر اطلاعات
+استخراج آرشیو بر اساس تاریخ.
 
 ```bash
 python scraper.py --ettelaat_scraper --days 3
 ```
-*   `--days`: Number of past days to scrape (default: 1).
+*   `--days`: تعداد روزهای گذشته برای استخراج (پیش‌فرض: ۱).
 
-### 4. Asia News Scraper
-Scrapes the archive list and downloads images.
+### ۴. اسکرپر آسیا نیوز
+استخراج لیست آرشیو و دانلود تصاویر.
 
 ```bash
 python scraper.py --asianews_scraper --count 5
 ```
-*   `--count`: Number of archive list pages to traverse.
-*   Images are saved in `asianews_data/`.
+*   `--count`: تعداد صفحات لیست آرشیو برای بررسی.
+*   تصاویر در پوشه `asianews_data/` ذخیره می‌شوند.
 
-### 5. Wikipedia Scraper
-Scrapes Persian Wikipedia pages starting from a list.
+### ۵. اسکرپر ویکی‌پدیا
+استخراج صفحات ویکی‌پدیای فارسی شروع از یک لیست خاص.
 
 ```bash
 python scraper.py --wiki_scraper
 ```
 
-## Docker Usage
+## استفاده با داکر (Docker)
 
-1.  Build the image:
+1.  ساخت ایمیج (Image):
     ```bash
     docker build -t persian-scraper .
     ```
 
-2.  Run a scraper (mount a volume to save data):
+2.  اجرای اسکرپر (اتصال یک Volume برای ذخیره داده‌ها):
     ```bash
     docker run -v $(pwd)/data:/app/data persian-scraper --hamshahri_scraper --start 100 --count 10 --output /app/data/hamshahri.xlsx
     ```
