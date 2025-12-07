@@ -4,11 +4,11 @@
 
 ## وب‌سایت‌های پشتیبانی شده
 
-1.  **همشهری آنلاین** (`--hamshahri_scraper`)
-2.  **کیهان** (`--kayhan_scraper`)
-3.  **اطلاعات** (`--ettelaat_scraper`)
-4.  **آسیا نیوز** (`--asianews_scraper`)
-5.  **ویکی‌پدیای فارسی** (`--wiki_scraper`)
+1.  **همشهری آنلاین** (`--site hamshahri`)
+2.  **کیهان** (`--site kayhan`)
+3.  **اطلاعات** (`--site ettelaat`)
+4.  **آسیا نیوز** (`--site asianews`)
+5.  **ویکی‌پدیای فارسی** (`--site wiki`)
 
 ## پیش‌نیازها
 
@@ -30,51 +30,47 @@
 
 ## نحوه استفاده
 
-فایل `scraper.py` را با پرچم (Flag) مورد نظر اجرا کنید.
-
-### آرگومان‌های عمومی
-
-*   `--workers`: تعداد تردها (Thread) برای پردازش موازی (پیش‌فرض: ۵).
-*   `--output`: نام فایل خروجی (مثلاً `my_data.xlsx`).
+فایل `scraper.py` را با پارامتر `--site` اجرا کنید.
 
 ### ۱. اسکرپر همشهری
 استخراج اخبار بر اساس شناسه (ID) صفحه.
 
 ```bash
-python scraper.py --hamshahri_scraper --start 1000 --count 50
+python scraper.py --site hamshahri --start 1000 --count 50
 ```
 *   `--start`: شناسه صفحه شروع.
 *   `--count`: تعداد صفحاتی که باید بررسی شوند.
+*   `--output`: نام فایل خروجی (اختیاری).
 
 ### ۲. اسکرپر کیهان
 استخراج اخبار بر اساس شناسه صفحه.
 
 ```bash
-python scraper.py --kayhan_scraper --start 1 --count 20
+python scraper.py --site kayhan --start 1 --count 20
 ```
 
 ### ۳. اسکرپر اطلاعات
 استخراج آرشیو بر اساس تاریخ.
 
 ```bash
-python scraper.py --ettelaat_scraper --days 3
+python scraper.py --site ettelaat --count 3
 ```
-*   `--days`: تعداد روزهای گذشته برای استخراج (پیش‌فرض: ۱).
+*   `--count`: در اینجا به معنی تعداد روزهای گذشته برای بررسی است (مثلاً ۳ روز اخیر).
 
 ### ۴. اسکرپر آسیا نیوز
-استخراج لیست آرشیو و دانلود تصاویر.
+استخراج لیست آرشیو.
 
 ```bash
-python scraper.py --asianews_scraper --count 5
+python scraper.py --site asianews --start 1 --count 5
 ```
-*   `--count`: تعداد صفحات لیست آرشیو برای بررسی.
-*   تصاویر در پوشه `asianews_data/` ذخیره می‌شوند.
+*   `--start`: شماره صفحه شروع آرشیو.
+*   `--count`: تعداد صفحات آرشیو برای بررسی.
 
 ### ۵. اسکرپر ویکی‌پدیا
-استخراج صفحات ویکی‌پدیای فارسی شروع از یک لیست خاص.
+استخراج صفحات ویکی‌پدیای فارسی شروع از لیست تمام صفحات.
 
 ```bash
-python scraper.py --wiki_scraper
+python scraper.py --site wiki
 ```
 
 ## استفاده با داکر (Docker)
@@ -86,5 +82,5 @@ python scraper.py --wiki_scraper
 
 2.  اجرای اسکرپر (اتصال یک Volume برای ذخیره داده‌ها):
     ```bash
-    docker run -v $(pwd)/data:/app/data persian-scraper --hamshahri_scraper --start 100 --count 10 --output /app/data/hamshahri.xlsx
+    docker run -v $(pwd)/data:/app/data persian-scraper --site hamshahri --start 100 --count 10 --output /app/data/hamshahri.xlsx
     ```
