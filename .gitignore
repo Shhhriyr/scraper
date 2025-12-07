@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.DS_Store
+*.log
+*.xlsx
+*.json
+asianews_data/
+data/
+data_selenium/
