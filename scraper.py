@@ -7,6 +7,15 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import jdatetime
 
+# Import for Keyword Extraction
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from hazm import word_tokenize, stopwords_list
+    HAS_TFIDF = True
+except ImportError:
+    print("Warning: scikit-learn or hazm not found. Keyword extraction will be disabled.")
+    HAS_TFIDF = False
+
 # Import extraction modules
 try:
     import hamshahri_scraper
@@ -19,7 +28,7 @@ except ImportError as e:
 
 # Global Configuration
 MAX_WORKERS = 5
-COLUMNS = ['Title', 'Link', 'Image', 'Description', 'Time', 'Gregorian_Date', 'Scraped_Date', 'Page', 'Subject', 'Full_Text']
+COLUMNS = ['Title', 'Link', 'Image', 'Description', 'Time', 'Gregorian_Date', 'Scraped_Date', 'Page', 'Subject', 'Full_Text', 'Keywords']
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
@@ -41,6 +50,76 @@ def fetch_url(url, headers=None, timeout=10):
         print(f"Request Error ({url}): {e}")
         return None, 0
 
+def extract_keywords_tfidf(results, top_n=10):
+    """
+    Calculates TF-IDF for the batch of results and extracts top keywords for each item.
+    Adds a 'Keywords' key to each result dictionary.
+    """
+    if not HAS_TFIDF or not results:
+        return results
+
+    # Prepare corpus
+    corpus = []
+    valid_indices = []
+    
+    for i, res in enumerate(results):
+        text = res.get('Full_Text')
+        if not text:
+            # Fallback to Description + Title if Full_Text is empty
+            parts = [res.get('Title', ''), res.get('Description', '')]
+            text = " ".join([str(p) for p in parts if p])
+        
+        if text and len(text.strip()) > 10:
+            corpus.append(text)
+            valid_indices.append(i)
+        else:
+            res['Keywords'] = ""
+
+    if not corpus:
+        return results
+
+    try:
+        # Custom tokenizer using hazm
+        def persian_tokenizer(text):
+            return word_tokenize(text)
+
+        # Get Persian stopwords
+        persian_stopwords = stopwords_list()
+        
+        # Initialize Vectorizer
+        vectorizer = TfidfVectorizer(
+            tokenizer=persian_tokenizer,
+            stop_words=persian_stopwords,
+            max_features=1000,
+            ngram_range=(1, 1) # Unigrams only for simple keywords
+        )
+        
+        # Fit and transform
+        tfidf_matrix = vectorizer.fit_transform(corpus)
+        feature_names = vectorizer.get_feature_names_out()
+        
+        # Extract top keywords for each document
+        for idx, row in enumerate(tfidf_matrix):
+            # Get the original result index
+            result_idx = valid_indices[idx]
+            
+            # Sort indices by score
+            # row is a sparse matrix, convert to dense or iterate
+            row_data = row.toarray().flatten()
+            top_indices = row_data.argsort()[-top_n:][::-1]
+            
+            keywords = []
+            for feat_idx in top_indices:
+                if row_data[feat_idx] > 0:
+                    keywords.append(feature_names[feat_idx])
+            
+            results[result_idx]['Keywords'] = ", ".join(keywords)
+            
+    except Exception as e:
+        print(f"Error calculating TF-IDF: {e}")
+        
+    return results
+
 def save_batch(results, output_file):
     """
     Saves a batch of results to the Excel file.
@@ -49,6 +128,11 @@ def save_batch(results, output_file):
     if not results:
         return
     
+    # Calculate Keywords before saving
+    if HAS_TFIDF:
+        print("Calculating TF-IDF keywords...")
+        results = extract_keywords_tfidf(results)
+
     new_df = pd.DataFrame(results)
     
     # Ensure all columns exist
