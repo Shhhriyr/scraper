@@ -5,3 +5,4 @@ openpyxl>=3.0.0
 jdatetime>=4.1.0
 scikit-learn>=1.0.0
 hazm>=0.7.0
+lxml>=4.9.0

@@ -17,6 +17,6 @@ COPY . .
 VOLUME /app/data
 
 # Define the command to run the scraper
-# This is just a default command; users can override it when running the container
-ENTRYPOINT ["python", "scraper.py"]
+# -u forces stdout and stderr to be unbuffered. This option has no effect on stdin.
+ENTRYPOINT ["python", "-u", "scraper.py"]
 CMD ["--help"]

@@ -5,7 +5,7 @@
 ## ویژگی‌ها
 
 *   **استخراج چندنخی (Multi-threading):** افزایش سرعت استخراج با پردازش موازی.
-*   **استخراج کلمات کلیدی (Keyword Extraction):** استفاده از الگوریتم **TF-IDF** برای استخراج خودکار ۱۰ کلمه کلیدی مهم از متن هر خبر.
+*   **استخراج کلمات کلیدی (Keyword Extraction):** استفاده از الگوریتم **TF-IDF** و کتابخانه **Hazm** برای استخراج خودکار ۱۰ کلمه کلیدی مهم از متن هر خبر.
 *   **خروجی اکسل:** ذخیره داده‌ها در فایل اکسل با ستون‌های منظم.
 *   **پشتیبانی از داکر:** قابلیت اجرا در محیط ایزوله کانتینر.
 
@@ -83,6 +83,7 @@ python scraper.py --site wiki
 
 ### ۶. اسکرپر ایران آنلاین (inn.ir)
 استخراج اخبار بر اساس شناسه (ID) صفحه.
+این اسکرپر تصویر خبر را از تگ `img` با ویژگی `fetchpriority="high"` و متن خبر را از تگ `div` با کلاس `content` استخراج می‌کند.
 
 ```bash
 python scraper.py --site inn --start 43712 --count 10
@@ -93,10 +94,11 @@ python scraper.py --site inn --start 43712 --count 10
 *   `Title`: عنوان خبر
 *   `Link`: لینک خبر
 *   `Full_Text`: متن کامل
-*   `Keywords`: کلمات کلیدی استخراج شده (جدید)
+*   `Keywords`: کلمات کلیدی استخراج شده (۱۰ کلمه برتر با استفاده از TF-IDF)
 *   `Gregorian_Date`: تاریخ میلادی
 *   `Scraped_Date`: تاریخ استخراج
-*   و سایر موارد (عکس، توضیحات و...)
+*   `Image`: لینک تصویر شاخص
+*   `Description`: خلاصه یا پاراگراف اول
 
 ## استفاده با داکر (Docker)
 
@@ -107,5 +109,5 @@ python scraper.py --site inn --start 43712 --count 10
 
 2.  اجرای اسکرپر (اتصال یک Volume برای ذخیره داده‌ها):
     ```bash
-    docker run -v $(pwd)/data:/app/data persian-scraper --site hamshahri --start 100 --count 10 --output /app/data/hamshahri.xlsx
+    docker run -v $(pwd)/data:/app/data persian-scraper --site inn --start 43712 --count 10 --output /app/data/inn.xlsx
     ```
