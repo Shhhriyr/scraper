@@ -16,6 +16,7 @@
 3.  **اطلاعات** (`--site ettelaat`)
 4.  **آسیا نیوز** (`--site asianews`)
 5.  **ویکی‌پدیای فارسی** (`--site wiki`)
+6.  **ایران آنلاین** (`--site inn`)
 
 ## پیش‌نیازها
 
@@ -78,6 +79,13 @@ python scraper.py --site asianews --start 1 --count 5
 
 ```bash
 python scraper.py --site wiki
+```
+
+### ۶. اسکرپر ایران آنلاین (inn.ir)
+استخراج اخبار بر اساس شناسه (ID) صفحه.
+
+```bash
+python scraper.py --site inn --start 43712 --count 10
 ```
 
 ## ستون‌های خروجی
