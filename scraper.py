@@ -24,6 +24,7 @@ try:
     import asianews_paper
     import scrape_wiki
     import inn_scraper
+    import arman_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -448,13 +449,57 @@ def run_inn(start, count, output):
     save_batch(results, output)
 
 # -------------------------------------------------------------------------
+# Armandaily Runner
+# -------------------------------------------------------------------------
+def process_arman_article(url, page_num):
+    html, status = fetch_url(url)
+    if html:
+        data = arman_scraper.parse_article_page(html, url)
+        if data:
+            data['Page'] = page_num
+            return data
+    return None
+
+def run_arman(start_page, count, output):
+    print(f"--- Running Armandaily Scraper (Start Page: {start_page}, Count: {count}) ---")
+    results = []
+    
+    for page in range(start_page, start_page + count):
+        url = f"https://armandaily.ir/category/last-news/page/{page}/"
+        print(f"Processing List Page: {url}")
+        
+        html, status = fetch_url(url)
+        
+        if html:
+            links = arman_scraper.parse_archive_page(html)
+            if links:
+                print(f"Page {page}: Found {len(links)} articles.")
+                
+                with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                    futures = [executor.submit(process_arman_article, link, page) for link in links]
+                    
+                    for future in as_completed(futures):
+                        res = future.result()
+                        if res:
+                            results.append(res)
+                            print(f"Extracted: {res.get('Title', 'No Title')[:30]}")
+            else:
+                print(f"Page {page}: No articles found.")
+        elif status == 404:
+            print(f"Page {page}: 404 Not Found.")
+        else:
+             print(f"Page {page}: Failed to fetch (Status: {status})")
+
+    save_batch(results, output)
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -487,6 +532,10 @@ def main():
     elif args.site == 'inn':
         out = args.output if args.output else "inn.xlsx"
         run_inn(args.start, args.count, out)
+
+    elif args.site == 'armandaily':
+        out = args.output if args.output else "armandaily.xlsx"
+        run_arman(args.start, args.count, out)
 
 if __name__ == "__main__":
     main()
