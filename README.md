@@ -20,6 +20,7 @@
 7.  **آرمان امروز** (`--site armandaily`)
 8.  **اخبار بانک** (`--site banki`)
 9.  **فرارو** (`--site fararu`)
+10. **تسنیم** (`--site tasnim`)
 
 ## پیش‌نیازها
 
@@ -115,6 +116,14 @@ python scraper.py --site banki --start 100 --count 10
 
 ```bash
 python scraper.py --site fararu --start 700000 --count 10
+```
+
+### ۱۰. اسکرپر تسنیم (tasnim)
+استخراج اخبار بر اساس شناسه (ID) صفحه.
+*توجه:* در حال حاضر تاریخ به صورت ثابت (۱۳۹۱/۰۸/۲۴) تنظیم شده و فقط ID تغییر می‌کند.
+
+```bash
+python scraper.py --site tasnim --start 92 --count 5
 ```
 
 ## ستون‌های خروجی

@@ -27,6 +27,7 @@ try:
     import arman_scraper
     import banki_news
     import fararu_scraper
+    import tasnim_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -557,13 +558,73 @@ def run_fararu(start, count, output):
     save_batch(results, output)
 
 # -------------------------------------------------------------------------
+# Tasnim Runner
+# -------------------------------------------------------------------------
+def process_tasnim_page(page_id, year, month, day):
+    # This runner is tricky because URL has date parts: /news/YYYY/MM/DD/ID
+    # Since the user asked for "starting from a number" but the URL structure is date-based,
+    # we might need to assume a fixed date or iterate differently.
+    # HOWEVER, Tasnim also supports /news/{id} which might redirect or work? 
+    # Let's test if simple ID works: https://www.tasnimnews.com/fa/news/{id} 
+    # If not, we might need the user to provide date or just iterate IDs if they are global.
+    # Based on the user prompt: "https://www.tasnimnews.com/fa/news/1391/08/24/92"
+    # It seems ID is 92. Let's try to scrape by ID if possible or we need a strategy.
+    
+    # Strategy: The user provided a specific URL format. 
+    # If we want to loop "from 92 upwards", we need to know if the ID is global unique
+    # or unique per day. Usually CMS IDs are global. 
+    # Let's try to construct URL assuming ID is the main variable, 
+    # but we might need the date. 
+    # Actually, many sites redirect /news/{id} to the full URL.
+    # Let's try a generic approach: iterate IDs and if we need date, we might fail without it.
+    # BUT, let's assume the user wants to iterate the ID at the end: "92".
+    # And keep the date fixed? Or is the ID unique globally?
+    # Let's try to just change the ID. 
+    
+    # For this implementation, I will assume we keep the date fixed as per the example 
+    # OR we try to hit a short link if it exists. 
+    # Let's use the date from the user example for now as a base.
+    # User said: "https://www.tasnimnews.com/fa/news/1391/08/24/92" -> start from 92.
+    
+    url = f"https://www.tasnimnews.com/fa/news/{year}/{month}/{day}/{page_id}"
+    html, status = fetch_url(url)
+    if html:
+        data = tasnim_scraper.parse_html(html, page_id, url)
+        if data:
+            return data
+    elif status != 404:
+        pass
+    return None
+
+def run_tasnim(start, count, output):
+    # Hardcoded date based on user example for now. 
+    # In a real scenario, we might want these as args, but let's stick to the request.
+    year, month, day = "1391", "08", "24"
+    
+    print(f"--- Running Tasnim Scraper (Starting from ID {start}, Date: {year}/{month}/{day}, Count: {count}) ---")
+    
+    results = []
+    page_ids = range(start, start + count)
+    
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_page = {executor.submit(process_tasnim_page, pid, year, month, day): pid for pid in page_ids}
+        
+        for future in as_completed(future_to_page):
+            data = future.result()
+            if data:
+                results.append(data)
+                print(f"Extracted: {data.get('Title', 'No Title')[:30]}")
+                
+    save_batch(results, output)
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -608,6 +669,10 @@ def main():
     elif args.site == 'fararu':
         out = args.output if args.output else "fararu.xlsx"
         run_fararu(args.start, args.count, out)
+
+    elif args.site == 'tasnim':
+        out = args.output if args.output else "tasnim.xlsx"
+        run_tasnim(args.start, args.count, out)
 
 if __name__ == "__main__":
     main()
