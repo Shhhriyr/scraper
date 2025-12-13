@@ -88,15 +88,42 @@ def parse_html(html_content, page_id, url):
         # 6. Date/Time
         # User snippet: <time datetime="2024-01-14T19:13Z"> ۲۲:۴۳ - ۲۴ دی ۱۴۰۲ </time>
         # We need to extract this text.
-        time_tag = soup.find('time')
-        if time_tag:
-            # Prefer text inside time tag as per user snippet example which has Persian date
-            data['Time'] = time_tag.get_text(strip=True)
+        
+        # Priority: prefer <time> that has Persian text (usually the second one if multiple)
+        time_tags = soup.find_all('time')
+        
+        target_time_tag = None
+        
+        # Heuristic: pick the one with Persian characters if possible
+        for tag in time_tags:
+            text = tag.get_text(strip=True)
+            if any("\u0600" <= c <= "\u06FF" for c in text): # Check for Persian/Arabic chars
+                target_time_tag = tag
+                break
+        
+        if not target_time_tag and time_tags:
+            target_time_tag = time_tags[0]
             
-            # Also try to set Gregorian Date from datetime attribute if available
-            datetime_attr = time_tag.get('datetime')
+        if target_time_tag:
+            data['Time'] = target_time_tag.get_text(strip=True)
+            
+            # Get Gregorian from datetime attribute
+            datetime_attr = target_time_tag.get('datetime')
             if datetime_attr:
-                data['Gregorian_Date'] = datetime_attr
+                # Format: 2025-12-13T11:03:35+00:00
+                # We want: YYYY-MM-DD HH:MM:SS
+                try:
+                    dt_obj = datetime.fromisoformat(datetime_attr)
+                    data['Gregorian_Date'] = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    # Handle older python versions or slightly different format (e.g. 'Z' at end)
+                    if datetime_attr.endswith('Z'):
+                        datetime_attr = datetime_attr[:-1] + '+00:00'
+                    try:
+                        dt_obj = datetime.fromisoformat(datetime_attr)
+                        data['Gregorian_Date'] = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
+                    except:
+                        data['Gregorian_Date'] = datetime_attr # Keep original if parse fails
 
         # Return data only if we have at least a Title or Text
         if data['Title'] or data['Full_Text']:

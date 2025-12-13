@@ -1,7 +1,72 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+import jdatetime
+import re
 
 COLUMNS = ['Title', 'Link', 'Image', 'Description', 'Time', 'Gregorian_Date', 'Scraped_Date', 'Page', 'Subject', 'Full_Text']
+
+MONTH_MAPPING = {
+    "فروردین": 1, "اردیبهشت": 2, "خرداد": 3,
+    "تیر": 4, "مرداد": 5, "شهریور": 6,
+    "مهر": 7, "آبان": 8, "آذر": 9,
+    "دی": 10, "بهمن": 11, "اسفند": 12
+}
+
+def convert_to_gregorian(persian_date_str):
+    try:
+        # Normalize digits
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        english_digits = "0123456789"
+        translation_table = str.maketrans(persian_digits, english_digits)
+        normalized_date = persian_date_str.translate(translation_table)
+        
+        # Check for YYYY/MM/DD format
+        date_match = re.search(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', normalized_date)
+        if date_match:
+            year = int(date_match.group(1))
+            month = int(date_match.group(2))
+            day = int(date_match.group(3))
+            
+            hour, minute = 0, 0
+            time_match = re.search(r'(\d{1,2}):(\d{1,2})', normalized_date)
+            if time_match:
+                hour = int(time_match.group(1))
+                minute = int(time_match.group(2))
+            
+            g_date = jdatetime.date(year, month, day).togregorian()
+            return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Fallback to text based month
+        parts = re.split(r'\s+|[-،,]', normalized_date)
+        day, month, year = None, None, None
+        
+        for i, part in enumerate(parts):
+            if part in MONTH_MAPPING:
+                month = MONTH_MAPPING[part]
+                # Look around for day and year
+                # Usually Day Month Year or Year Month Day
+                # Scan neighbors
+                if i > 0 and parts[i-1].isdigit():
+                    day = int(parts[i-1])
+                if i + 1 < len(parts) and parts[i+1].isdigit():
+                    year = int(parts[i+1])
+                # If not found immediately, look further? 
+                # For Hamshahri: "پنجشنبه 24 آبان 1403" -> parts: [پنجشنبه, 24, آبان, 1403]
+                break
+        
+        if day and month and year:
+             hour, minute = 0, 0
+             time_match = re.search(r'(\d{1,2}):(\d{1,2})', normalized_date)
+             if time_match:
+                 hour = int(time_match.group(1))
+                 minute = int(time_match.group(2))
+                 
+             g_date = jdatetime.date(year, month, day).togregorian()
+             return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
+            
+    except Exception as e:
+        pass
+    return None
 
 def parse_html(html_content, page_id, url):
     """
@@ -56,12 +121,8 @@ def parse_html(html_content, page_id, url):
             date_span = date_div.find('span')
             if date_span:
                 date_text = date_span.get_text(strip=True)
-                data['Gregorian_Date'] = date_text
-                # Attempt to extract time if present (e.g., "Date - Time")
-                if '-' in date_text:
-                    parts = date_text.split('-')
-                    if len(parts) > 1:
-                        data['Time'] = parts[-1].strip()
+                data['Time'] = date_text
+                data['Gregorian_Date'] = convert_to_gregorian(date_text)
         
         return data
 

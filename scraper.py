@@ -39,22 +39,25 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
-def fetch_url(url, headers=None, timeout=10):
-    """
-    Fetches the URL and returns the text content and status code.
-    """
-    if headers is None:
-        headers = HEADERS
-    try:
-        response = requests.get(url, headers=headers, timeout=timeout)
-        # Enforce UTF-8 for Persian content
-        response.encoding = 'utf-8'
-        if response.status_code == 200:
-            return response.text, response.status_code
-        return None, response.status_code
-    except Exception as e:
-        print(f"Request Error ({url}): {e}")
-        return None, 0
+def fetch_url(url, retries=3):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                return response.text, 200
+            elif response.status_code == 404:
+                return None, 404
+            else:
+                # print(f"Error fetching {url}: Status {response.status_code}")
+                pass
+        except requests.RequestException as e:
+            # print(f"Request error for {url}: {e}")
+            pass
+        time.sleep(1)
+    return None, 0
 
 def extract_keywords_tfidf(results, top_n=10):
     """

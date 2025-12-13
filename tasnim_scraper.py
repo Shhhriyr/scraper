@@ -1,7 +1,67 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+import jdatetime
+import re
 
 COLUMNS = ['Title', 'Link', 'Image', 'Description', 'Time', 'Gregorian_Date', 'Scraped_Date', 'Page', 'Subject', 'Full_Text', 'Keywords']
+
+MONTH_MAPPING = {
+    "فروردین": 1, "اردیبهشت": 2, "خرداد": 3,
+    "تیر": 4, "مرداد": 5, "شهریور": 6,
+    "مهر": 7, "آبان": 8, "آذر": 9,
+    "دی": 10, "بهمن": 11, "اسفند": 12
+}
+
+def convert_to_gregorian(persian_date_str):
+    try:
+        # Normalize digits
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        english_digits = "0123456789"
+        translation_table = str.maketrans(persian_digits, english_digits)
+        normalized_date = persian_date_str.translate(translation_table)
+        
+        # Check for YYYY/MM/DD format
+        date_match = re.search(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', normalized_date)
+        if date_match:
+            year = int(date_match.group(1))
+            month = int(date_match.group(2))
+            day = int(date_match.group(3))
+            
+            hour, minute = 0, 0
+            time_match = re.search(r'(\d{1,2}):(\d{1,2})', normalized_date)
+            if time_match:
+                hour = int(time_match.group(1))
+                minute = int(time_match.group(2))
+            
+            g_date = jdatetime.date(year, month, day).togregorian()
+            return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Fallback to text based month
+        parts = re.split(r'\s+|[-،,]', normalized_date)
+        day, month, year = None, None, None
+        
+        for i, part in enumerate(parts):
+            if part in MONTH_MAPPING:
+                month = MONTH_MAPPING[part]
+                if i > 0 and parts[i-1].isdigit():
+                    day = int(parts[i-1])
+                if i + 1 < len(parts) and parts[i+1].isdigit():
+                    year = int(parts[i+1])
+                break
+        
+        if day and month and year:
+             hour, minute = 0, 0
+             time_match = re.search(r'(\d{1,2}):(\d{1,2})', normalized_date)
+             if time_match:
+                 hour = int(time_match.group(1))
+                 minute = int(time_match.group(2))
+                 
+             g_date = jdatetime.date(year, month, day).togregorian()
+             return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
+            
+    except Exception as e:
+        pass
+    return None
 
 def parse_html(html_content, page_id, url):
     """
@@ -66,14 +126,41 @@ def parse_html(html_content, page_id, url):
                 data['Image'] = src
 
         # 4. Time
-        # Usually in div.time or similar
-        time_tag = soup.find('div', class_='time') # Hypothetical common class
-        if not time_tag:
-            # Sometimes date is in headers
-            time_tag = soup.find('span', class_='time')
-            
+        # Usually in .time class (li, div, or span)
+        time_tag = soup.find(class_='time') 
+        
         if time_tag:
-            data['Time'] = time_tag.get_text(strip=True)
+            # Extract text from the tag itself, but be careful of nested tags
+            # Example: <li class="time">10 بهمن 1403 - 10:21<li class="service">...</li></li>
+            # We want the direct text or text before child tags.
+            
+            # Get text node directly?
+            # Or just get_text() and clean it?
+            # get_text() will include "اخبار اجتماعی" etc.
+            # Let's try to get the first text node.
+            
+            full_text = time_tag.get_text(" ", strip=True)
+            # The inspection showed: 10 بهمن 1403 - 10:21 followed by service links.
+            # The service links are siblings or children?
+            # Inspection: <li class="time">TEXT<li class="service">...</li></li> 
+            # This HTML looks malformed (li inside li without ul?). 
+            # If so, BeautifulSoup might parse it as nested.
+            
+            # Let's try to get the text content of the element itself, excluding children.
+            text = "".join([t for t in time_tag.contents if isinstance(t, str)]).strip()
+            
+            if not text:
+                # Fallback: Split by common separators if get_text returns too much
+                # But inspect output showed: <li class="time">10 بهمن 1403 - 10:21<li class="service">
+                # This suggests the second li is NOT inside the first one in valid HTML, but maybe nested in source or soup fixed it?
+                # Actually, in the inspection output: <li class="time">...<li class="service">...</li></li>
+                # It looks like the service li IS inside the time li.
+                text = time_tag.contents[0] if time_tag.contents else ""
+                if not isinstance(text, str):
+                    text = time_tag.get_text(strip=True)
+
+            data['Time'] = text.strip()
+            data['Gregorian_Date'] = convert_to_gregorian(data['Time'])
 
         # Return data if we have Title or Text
         if data['Title'] or data['Full_Text']:

@@ -7,10 +7,10 @@ from datetime import datetime
 
 # دیکشنری تبدیل ماه فارسی به عدد
 MONTH_MAPPING = {
-    "فروردین": "01", "اردیبهشت": "02", "خرداد": "03",
-    "تیر": "04", "مرداد": "05", "شهریور": "06",
-    "مهر": "07", "آبان": "08", "آذر": "09",
-    "دی": "10", "بهمن": "11", "اسفند": "12"
+    "فروردین": 1, "اردیبهشت": 2, "خرداد": 3,
+    "تیر": 4, "مرداد": 5, "شهریور": 6,
+    "مهر": 7, "آبان": 8, "آذر": 9,
+    "دی": 10, "بهمن": 11, "اسفند": 12
 }
 
 def convert_to_gregorian(persian_date_str):
@@ -38,7 +38,7 @@ def convert_to_gregorian(persian_date_str):
             return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
 
         # Fallback to text based month
-        parts = persian_date_str.split()
+        parts = re.split(r'\s+|[-]', normalized_date) # Split by space or dash
         day, month, year = None, None, None
         
         for i, part in enumerate(parts):
@@ -61,6 +61,7 @@ def convert_to_gregorian(persian_date_str):
              return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
             
     except Exception as e:
+        # print(f"Date conversion error: {e}")
         pass
     return None
 
@@ -77,7 +78,7 @@ def convert_date_to_folder_name(day, month_name, year):
     if len(day) == 1:
         day = "0" + day
         
-    month_code = MONTH_MAPPING.get(month_name, "00")
+    month_code = f"{MONTH_MAPPING.get(month_name, 0):02d}"
     
     return f"{year}{month_code}{day}"
 

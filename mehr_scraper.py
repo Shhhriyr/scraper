@@ -37,21 +37,27 @@ def convert_to_gregorian(persian_date_str):
             return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
 
         # Fallback to text based month
-        parts = persian_date_str.split()
+        parts = re.split(r'\s+|[-،,]', normalized_date)
         day, month, year = None, None, None
         
         for i, part in enumerate(parts):
             if part in MONTH_MAPPING:
                 month = MONTH_MAPPING[part]
+                # Look around for day and year
+                # Usually Day Month Year or Year Month Day
+                # Scan neighbors
                 if i > 0 and parts[i-1].isdigit():
                     day = int(parts[i-1])
                 if i + 1 < len(parts) and parts[i+1].isdigit():
                     year = int(parts[i+1])
+                # Check next one if current is empty string or something
+                elif i + 2 < len(parts) and parts[i+2].isdigit():
+                     year = int(parts[i+2])
                 break
         
         if day and month and year:
              hour, minute = 0, 0
-             time_match = re.search(r'(\d{1,2}):(\d{1,2})', persian_date_str)
+             time_match = re.search(r'(\d{1,2}):(\d{1,2})', normalized_date)
              if time_match:
                  hour = int(time_match.group(1))
                  minute = int(time_match.group(2))
