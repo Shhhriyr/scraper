@@ -237,15 +237,18 @@ def run_kayhan(start, count, output):
 # -------------------------------------------------------------------------
 # Ettelaat Runner
 # -------------------------------------------------------------------------
-def process_ettelaat_article(link, title, date_str, page_num):
-    html, status = fetch_url(link)
+def process_ettelaat_article(item, page_num):
+    html, status = fetch_url(item['Link'])
     if html:
-        details = ettelaat_scraper.parse_article_page(html, link)
+        details = ettelaat_scraper.parse_article_page(html, item['Link'])
         if details:
             return {
-                "Title": title,
-                "Link": link,
-                "Time": date_str,
+                "Title": item['Title'],
+                "Link": item['Link'],
+                "Time": item['Time'],
+                "Gregorian_Date": item.get('Gregorian_Date'),
+                "Description": item.get('Description'),
+                "Image": item.get('Image'),
                 "Page": page_num,
                 "Subject": details.get("Subject"),
                 "Full_Text": details.get("Full_Text"),
@@ -289,17 +292,12 @@ def run_ettelaat(days, output):
                     for item in items:
                         futures.append(executor.submit(
                             process_ettelaat_article, 
-                            item['Link'], item['Title'], item['Time'], page
+                            item, page
                         ))
                     
                     for future in as_completed(futures):
                         res = future.result()
                         if res:
-                            # Merge with initial item data (Description, Image) if needed
-                            # For simplicity we just take what process_ettelaat_article returned + extras
-                            # But wait, image/desc were in the list page item.
-                            # Let's match them back or pass them through.
-                            # Simplified: just append res. Ideally we pass more data to process_ettelaat_article.
                             all_results.append(res)
             
             page += 1
@@ -324,14 +322,10 @@ def process_asianews_article(link, date_str):
             return {
                 "Title": details.get("title"),
                 "Link": link,
-                "Time": date_str,
+                "Time": details.get("time") or date_str,
+                "Gregorian_Date": details.get("gregorian_date"),
                 "Scraped_Date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "Full_Text": "", # Asianews parser might not extract full text? Checked code: it returns title, folder_name, image_urls.
-                # Wait, asianews_paper.py parse_article_page returned {title, folder_name, image_urls}. 
-                # It didn't seem to extract full text in the cleaned version I saw?
-                # Let's check asianews_paper.py again.
-                # It had: title, folder_name, image_urls. No full text?
-                # That's a limitation of the current module. I'll stick to what it returns.
+                "Full_Text": details.get("full_text"),
                 "Image": details.get("image_urls")[0] if details.get("image_urls") else None
             }
     return None

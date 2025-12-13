@@ -1,7 +1,59 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+import jdatetime
+import re
 
 COLUMNS = ['Title', 'Link', 'Image', 'Description', 'Time', 'Gregorian_Date', 'Scraped_Date', 'Page', 'Subject', 'Full_Text', 'Keywords']
+
+MONTH_MAPPING = {
+    "فروردین": 1, "اردیبهشت": 2, "خرداد": 3,
+    "تیر": 4, "مرداد": 5, "شهریور": 6,
+    "مهر": 7, "آبان": 8, "آذر": 9,
+    "دی": 10, "بهمن": 11, "اسفند": 12
+}
+
+def convert_to_gregorian(persian_date_str):
+    try:
+        # Example: "21 آذر 1404 ساعت 23:52"
+        # Remove day name if present
+        parts = persian_date_str.split()
+        
+        # Look for day, month, year
+        day, month, year = None, None, None
+        
+        for i, part in enumerate(parts):
+            if part in MONTH_MAPPING:
+                month = MONTH_MAPPING[part]
+                if i > 0 and parts[i-1].isdigit():
+                    day = int(parts[i-1])
+                if i + 1 < len(parts) and parts[i+1].isdigit():
+                    year = int(parts[i+1])
+                break
+        
+        # If not found with simple logic, try regex
+        if not (day and month and year):
+            match = re.search(r'(\d{1,2})\s+([آ-ی]+)\s+(\d{4})', persian_date_str)
+            if match:
+                day = int(match.group(1))
+                month_name = match.group(2)
+                year = int(match.group(3))
+                month = MONTH_MAPPING.get(month_name)
+
+        if day and month and year:
+            # Handle time
+            hour, minute = 0, 0
+            time_match = re.search(r'(\d{1,2}):(\d{1,2})', persian_date_str)
+            if time_match:
+                hour = int(time_match.group(1))
+                minute = int(time_match.group(2))
+                
+            g_date = jdatetime.date(year, month, day).togregorian()
+            return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
+            
+    except Exception as e:
+        # print(f"Date conversion error: {e}")
+        pass
+    return None
 
 def parse_archive_page(html_content):
     """
@@ -46,6 +98,18 @@ def parse_article_page(html_content, url):
         h1 = soup.find('h1')
         if h1:
             data['Title'] = h1.get_text(strip=True)
+            
+        # Time
+        # User snippet: <i class="icofont-clock-time"></i> تاریخ و زمان ارسال:  21 آذر 1404 ساعت 23:52
+        time_icon = soup.find('i', class_='icofont-clock-time')
+        if time_icon:
+            # The text is usually in the parent or next sibling
+            # In snippet: <li><i...></i> Text</li>
+            parent_text = time_icon.parent.get_text(strip=True)
+            # Remove label if present
+            clean_time = parent_text.replace('تاریخ و زمان ارسال:', '').strip()
+            data['Time'] = clean_time
+            data['Gregorian_Date'] = convert_to_gregorian(clean_time)
             
         # Image: fetchpriority="high"
         # User example: <img ... fetchpriority="high" ...>

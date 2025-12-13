@@ -1,5 +1,53 @@
 from bs4 import BeautifulSoup
 import jdatetime
+import re
+from datetime import datetime
+
+MONTH_MAPPING = {
+    "فروردین": 1, "اردیبهشت": 2, "خرداد": 3,
+    "تیر": 4, "مرداد": 5, "شهریور": 6,
+    "مهر": 7, "آبان": 8, "آذر": 9,
+    "دی": 10, "بهمن": 11, "اسفند": 12
+}
+
+def convert_to_gregorian(persian_date_str):
+    try:
+        # Normalize digits
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        english_digits = "0123456789"
+        translation_table = str.maketrans(persian_digits, english_digits)
+        normalized_date = persian_date_str.translate(translation_table)
+        
+        # Check for YYYY/MM/DD format
+        date_match = re.search(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', normalized_date)
+        if date_match:
+            year = int(date_match.group(1))
+            month = int(date_match.group(2))
+            day = int(date_match.group(3))
+            
+            g_date = jdatetime.date(year, month, day).togregorian()
+            return datetime(g_date.year, g_date.month, g_date.day).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Fallback to text based month
+        parts = persian_date_str.split()
+        day, month, year = None, None, None
+        
+        for i, part in enumerate(parts):
+            if part in MONTH_MAPPING:
+                month = MONTH_MAPPING[part]
+                if i > 0 and parts[i-1].isdigit():
+                    day = int(parts[i-1])
+                if i + 1 < len(parts) and parts[i+1].isdigit():
+                    year = int(parts[i+1])
+                break
+        
+        if day and month and year:
+             g_date = jdatetime.date(year, month, day).togregorian()
+             return datetime(g_date.year, g_date.month, g_date.day).strftime("%Y-%m-%d %H:%M:%S")
+            
+    except Exception as e:
+        pass
+    return None
 
 def parse_archive_page(html_content):
     """
@@ -32,6 +80,10 @@ def parse_archive_page(html_content):
             # Time
             time_element = item.select_one(".desc time")
             news_time = time_element.get_text(strip=True) if time_element else ""
+            
+            gregorian_date = None
+            if news_time:
+                gregorian_date = convert_to_gregorian(news_time)
 
             if link:
                  if link.startswith('/'):
@@ -42,7 +94,8 @@ def parse_archive_page(html_content):
                 'Link': link,
                 'Image': img_src,
                 'Description': description,
-                'Time': news_time
+                'Time': news_time,
+                'Gregorian_Date': gregorian_date
             })
         except Exception as e:
             print(f"Error parsing item: {e}")

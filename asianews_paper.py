@@ -2,6 +2,8 @@ import os
 import requests
 import re
 from bs4 import BeautifulSoup
+import jdatetime
+from datetime import datetime
 
 # دیکشنری تبدیل ماه فارسی به عدد
 MONTH_MAPPING = {
@@ -10,6 +12,57 @@ MONTH_MAPPING = {
     "مهر": "07", "آبان": "08", "آذر": "09",
     "دی": "10", "بهمن": "11", "اسفند": "12"
 }
+
+def convert_to_gregorian(persian_date_str):
+    try:
+        # Normalize digits
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        english_digits = "0123456789"
+        translation_table = str.maketrans(persian_digits, english_digits)
+        normalized_date = persian_date_str.translate(translation_table)
+        
+        # Check for YYYY/MM/DD format
+        date_match = re.search(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})', normalized_date)
+        if date_match:
+            year = int(date_match.group(1))
+            month = int(date_match.group(2))
+            day = int(date_match.group(3))
+            
+            hour, minute = 0, 0
+            time_match = re.search(r'(\d{1,2}):(\d{1,2})', normalized_date)
+            if time_match:
+                hour = int(time_match.group(1))
+                minute = int(time_match.group(2))
+            
+            g_date = jdatetime.date(year, month, day).togregorian()
+            return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Fallback to text based month
+        parts = persian_date_str.split()
+        day, month, year = None, None, None
+        
+        for i, part in enumerate(parts):
+            if part in MONTH_MAPPING:
+                month = MONTH_MAPPING[part]
+                if i > 0 and parts[i-1].isdigit():
+                    day = int(parts[i-1])
+                if i + 1 < len(parts) and parts[i+1].isdigit():
+                    year = int(parts[i+1])
+                break
+        
+        if day and month and year:
+             hour, minute = 0, 0
+             time_match = re.search(r'(\d{1,2}):(\d{1,2})', persian_date_str)
+             if time_match:
+                 hour = int(time_match.group(1))
+                 minute = int(time_match.group(2))
+                 
+             g_date = jdatetime.date(year, month, day).togregorian()
+             return datetime(g_date.year, g_date.month, g_date.day, hour, minute).strftime("%Y-%m-%d %H:%M:%S")
+            
+    except Exception as e:
+        pass
+    return None
 
 def convert_date_to_folder_name(day, month_name, year):
     # تبدیل اعداد فارسی به انگلیسی اگر وجود داشته باشد
@@ -57,7 +110,7 @@ def parse_archive_page(html_content):
 def parse_article_page(html_content, url):
     """
     Extracts data from article page.
-    Returns: dict with title, folder_name (date), image_urls
+    Returns: dict with title, folder_name (date), image_urls, full_text, etc.
     """
     soup = BeautifulSoup(html_content, 'html.parser')
     
@@ -66,13 +119,26 @@ def parse_article_page(html_content, url):
         raw_title = title_el.get_text(strip=True) if title_el else ""
         title_text = re.sub(r'[<>:"/\\|?*]', '', raw_title).replace(" ", "_")
         
-        # Date extraction from title
+        # Date extraction
         folder_name = "untitled"
+        persian_date = ""
+        gregorian_date = None
+        
+        # Try to find date in page content first
+        date_el = soup.select_one("span.blog-post-date, .post-date, .date, time")
+        if date_el:
+            persian_date = date_el.get_text(strip=True)
+            gregorian_date = convert_to_gregorian(persian_date)
+
+        # Fallback to title regex if no date found or needed for folder_name
         date_match = re.search(r'(\d+|[۰-۹]+)[\s_-]+(فروردین|اردیبهشت|خرداد|تیر|مرداد|شهریور|مهر|آبان|آذر|دی|بهمن|اسفند)[\s_-]+(\d{4}|[۰-۹]{4})', title_text)
         
         if date_match:
             day, month_name, year = date_match.groups()
             folder_name = convert_date_to_folder_name(day, month_name, year)
+            if not persian_date:
+                persian_date = f"{day} {month_name} {year}"
+                gregorian_date = convert_to_gregorian(persian_date)
         
         # Image extraction
         imgs = []
@@ -92,10 +158,22 @@ def parse_article_page(html_content, url):
                     src = "https://asianews.ir" + src
                 img_urls.append(src)
                 
+        # Full Text Extraction
+        full_text = ""
+        text_selectors = ["article", ".post-content", ".entry-content", ".blog-post-content", "div.item-body"]
+        for sel in text_selectors:
+            content_el = soup.select_one(sel)
+            if content_el:
+                full_text = content_el.get_text(separator="\n", strip=True)
+                break
+                
         return {
             "title": title_text,
             "folder_name": folder_name,
-            "image_urls": img_urls
+            "image_urls": img_urls,
+            "full_text": full_text,
+            "time": persian_date,
+            "gregorian_date": gregorian_date
         }
         
     except Exception as e:
