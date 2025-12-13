@@ -25,6 +25,7 @@ try:
     import scrape_wiki
     import inn_scraper
     import arman_scraper
+    import banki_news
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -493,13 +494,44 @@ def run_arman(start_page, count, output):
     save_batch(results, output)
 
 # -------------------------------------------------------------------------
+# Banki (AkhbarBank) Runner
+# -------------------------------------------------------------------------
+def process_banki_page(page_id):
+    url = f"https://www.akhbarbank.com/news/{page_id}"
+    html, status = fetch_url(url)
+    if html:
+        data = banki_news.parse_html(html, page_id, url)
+        if data:
+            return data
+    elif status != 404:
+        pass
+    return None
+
+def run_banki(start, count, output):
+    print(f"--- Running Banki (AkhbarBank) Scraper (Starting from ID {start}, Count: {count}) ---")
+    
+    results = []
+    page_ids = range(start, start + count)
+    
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_page = {executor.submit(process_banki_page, pid): pid for pid in page_ids}
+        
+        for future in as_completed(future_to_page):
+            data = future.result()
+            if data:
+                results.append(data)
+                print(f"Extracted: {data.get('Title', 'No Title')[:30]}")
+                
+    save_batch(results, output)
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -536,6 +568,10 @@ def main():
     elif args.site == 'armandaily':
         out = args.output if args.output else "armandaily.xlsx"
         run_arman(args.start, args.count, out)
+
+    elif args.site == 'banki':
+        out = args.output if args.output else "banki.xlsx"
+        run_banki(args.start, args.count, out)
 
 if __name__ == "__main__":
     main()
