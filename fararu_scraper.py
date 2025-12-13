@@ -23,10 +23,13 @@ def parse_html(html_content, page_id, url):
             data['Title'] = h1.get_text(strip=True)
 
         # 2. Body/Full Text
-        # Fararu content is often in <div class="body"> or <div class="news-body">
-        body_div = soup.find('div', class_='body')
+        # User specified: <div id="echo_detail">
+        body_div = soup.find('div', id='echo_detail')
         if not body_div:
-            body_div = soup.find('div', class_='news-body')
+            # Fallback to previous logic
+            body_div = soup.find('div', class_='body')
+            if not body_div:
+                 body_div = soup.find('div', class_='news-body')
         
         if body_div:
             # Extract paragraphs
@@ -39,7 +42,18 @@ def parse_html(html_content, page_id, url):
                 
             data['Full_Text'] = text_content
 
-        # 3. Description / Lead (Subtitle)
+        # 3. Subject / Category
+        # User snippet: <ul class="breadcrumb_list"> ... <li><a ...>عمومی</a></li>
+        breadcrumb = soup.find('ul', class_='breadcrumb_list')
+        if breadcrumb:
+            # Usually the last li or specific one. User showed "عمومی" in breadcrumb.
+            # Let's take the last 'li' text or link text.
+            lis = breadcrumb.find_all('li')
+            if lis:
+                last_li = lis[-1]
+                data['Subject'] = last_li.get_text(strip=True).replace('/', '').strip()
+
+        # 4. Description / Lead (Subtitle)
         # Often in <div class="subtitle"> or <div class="lead">
         subtitle_div = soup.find('div', class_='subtitle')
         if not subtitle_div:
@@ -51,13 +65,15 @@ def parse_html(html_content, page_id, url):
              # Fallback: First 200 chars of text
              data['Description'] = data['Full_Text'][:200] + "..."
 
-        # 4. Image
-        # Usually main image is in <div class="main_photo"> img or similar
-        # Or look for the first image in body
+        # 5. Image
+        # User snippet: <div class="primary_files"> <img fetchpriority="high" ...>
+        # Priority: div.primary_files img[fetchpriority="high"] -> div.primary_files img -> div.body img
         img_tag = None
-        main_photo_div = soup.find('div', class_='main_photo')
-        if main_photo_div:
-            img_tag = main_photo_div.find('img')
+        primary_files = soup.find('div', class_='primary_files')
+        if primary_files:
+            img_tag = primary_files.find('img', attrs={'fetchpriority': 'high'})
+            if not img_tag:
+                img_tag = primary_files.find('img')
         
         if not img_tag and body_div:
             img_tag = body_div.find('img')
@@ -69,14 +85,18 @@ def parse_html(html_content, page_id, url):
                     src = "https://fararu.com" + src
                 data['Image'] = src
 
-        # 5. Date/Time
-        # Usually in <div class="publish_time"> or header date
-        time_span = soup.find('span', class_='publish_time') # hypothetical
-        if not time_span:
-             # Check header date
-             pass 
-             # (We can improve this if we inspect specific Fararu structure, 
-             # but for now we leave it empty or scrape what's easy)
+        # 6. Date/Time
+        # User snippet: <time datetime="2024-01-14T19:13Z"> ۲۲:۴۳ - ۲۴ دی ۱۴۰۲ </time>
+        # We need to extract this text.
+        time_tag = soup.find('time')
+        if time_tag:
+            # Prefer text inside time tag as per user snippet example which has Persian date
+            data['Time'] = time_tag.get_text(strip=True)
+            
+            # Also try to set Gregorian Date from datetime attribute if available
+            datetime_attr = time_tag.get('datetime')
+            if datetime_attr:
+                data['Gregorian_Date'] = datetime_attr
 
         # Return data only if we have at least a Title or Text
         if data['Title'] or data['Full_Text']:

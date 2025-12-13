@@ -99,9 +99,9 @@ python scraper.py --site inn --start 43712 --count 10
 این اسکرپر از صفحه لیست (Pagination) شروع کرده و تمام لینک‌های اخبار موجود در هر صفحه را استخراج می‌کند.
 
 ```bash
-python scraper.py --site armandaily --start 1 --count 5
+python scraper.py --site armandaily --start 0 --count 5
 ```
-*   `--start`: شماره صفحه شروع (معمولاً ۱).
+*   `--start`: شماره صفحه شروع (معمولاً ۰ یا ۱).
 *   `--count`: تعداد صفحات لیست که باید بررسی شوند.
 
 ### ۸. اسکرپر اخبار بانک (banki)
@@ -109,30 +109,28 @@ python scraper.py --site armandaily --start 1 --count 5
 این اسکرپر متن خبر را از تگ `div` با شناسه `doctextarea` استخراج می‌کند.
 
 ```bash
-python scraper.py --site banki --start 100 --count 10
+python scraper.py --site banki --start 102371 --count 10
 ```
 
 ### ۹. اسکرپر فرارو (fararu)
 استخراج اخبار بر اساس شناسه (ID) صفحه.
 
 ```bash
-python scraper.py --site fararu --start 700000 --count 10
+python scraper.py --site fararu --start 931959 --count 10
 ```
 
 ### ۱۰. اسکرپر تسنیم (tasnim)
 استخراج اخبار بر اساس شناسه (ID) صفحه.
-*توجه:* در حال حاضر تاریخ به صورت ثابت (۱۳۹۱/۰۸/۲۴) تنظیم شده و فقط ID تغییر می‌کند.
 
 ```bash
-python scraper.py --site tasnim --start 92 --count 5
+python scraper.py --site tasnim --start 3470177 --count 10
 ```
 
 ### ۱۱. اسکرپر مهر (mehr)
-استخراج اخبار خبرگزاری مهر بر اساس شناسه (ID).
-*اطلاعات از کلاس‌های `item-header` و `item-body` استخراج می‌شود.*
+استخراج اخبار بر اساس شناسه (ID) صفحه.
 
 ```bash
-python scraper.py --site mehr --start 6000000 --count 10
+python scraper.py --site mehr --start 6687686 --count 10
 ```
 
 ## ستون‌های خروجی

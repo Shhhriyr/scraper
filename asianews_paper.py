@@ -34,7 +34,8 @@ def parse_archive_page(html_content):
     Returns: List of dicts {link, date}
     """
     soup = BeautifulSoup(html_content, 'html.parser')
-    articles = soup.select("article.blog-post")
+    # Changed from article.blog-post to .blog-post to be more generic (it is a div now)
+    articles = soup.select(".blog-post")
     results = []
     
     for art in articles:

@@ -11,22 +11,24 @@ def parse_archive_page(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
     links = []
     
+    # Based on inspection:
+    # <article class="archive_posts plus_h_post">
+    #   ...
+    #   <footer>
+    #     <a class="plus_post_ftl" href="...">...</a>
+    #   </footer>
+    # </article>
+    
     posts = soup.find_all(class_="archive_posts")
-    # Also handle the combined class if necessary, but finding "archive_posts" is usually enough.
-    # User said: class="archive_posts plus_h_post". 
-    # In BS4, searching for one class of a multi-class element works.
     
     for post in posts:
-        # Check if it also has "plus_h_post" if we want to be strict, 
-        # but usually scraping all posts in the archive list is desired.
-        # User instruction: "in each class='plus_post_ftl' get the link"
+        # The 'a' tag itself has the class "plus_post_ftl"
+        # We search for 'a' with this class inside the post
+        ftl_link = post.find('a', class_="plus_post_ftl")
         
-        ftl = post.find(class_="plus_post_ftl")
-        if ftl:
-            a_tag = ftl.find('a')
-            if a_tag and a_tag.get('href'):
-                links.append(a_tag.get('href'))
-                
+        if ftl_link and ftl_link.get('href'):
+            links.append(ftl_link.get('href'))
+            
     return links
 
 def parse_article_page(html_content, url):

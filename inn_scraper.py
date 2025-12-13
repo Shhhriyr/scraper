@@ -57,14 +57,23 @@ def parse_html(html_content, page_id, url):
             if not data['Title']:
                 data['Title'] = img_tag.get('alt')
 
-        # 3. Extract Date/Time (Optional but recommended)
-        # Look for typical news date classes
-        date_tag = soup.find('div', class_='news_pdate_c') # Common in Iranian sites (like Kayhan)
-        if not date_tag:
-             date_tag = soup.find('span', class_='news_date')
+        # 3. Extract Date/Time
+        # Look for <time class="date"> inside <div class="details">
+        # User snippet: <div class="details"> ... <time class="date" datetime="...">...</time> ... </div>
+        details_div = soup.find('div', class_='details')
+        if details_div:
+            time_tag = details_div.find('time', class_='date')
+            if time_tag:
+                data['Time'] = time_tag.get_text(strip=True)
+                # If text is empty, try datetime attribute
+                if not data['Time']:
+                    data['Time'] = time_tag.get('datetime')
         
-        if date_tag:
-             data['Time'] = date_tag.get_text(strip=True)
+        # Fallback if details div not found but time tag exists globally
+        if not data['Time']:
+             time_tag = soup.find('time', class_='date')
+             if time_tag:
+                 data['Time'] = time_tag.get_text(strip=True)
 
         # Return data only if we found something useful (Title or Text)
         if data['Title'] or data['Full_Text']:

@@ -562,50 +562,39 @@ def run_fararu(start, count, output):
 # Tasnim Runner
 # -------------------------------------------------------------------------
 def process_tasnim_page(page_id, year, month, day):
-    # This runner is tricky because URL has date parts: /news/YYYY/MM/DD/ID
-    # Since the user asked for "starting from a number" but the URL structure is date-based,
-    # we might need to assume a fixed date or iterate differently.
-    # HOWEVER, Tasnim also supports /news/{id} which might redirect or work? 
-    # Let's test if simple ID works: https://www.tasnimnews.com/fa/news/{id} 
-    # If not, we might need the user to provide date or just iterate IDs if they are global.
-    # Based on the user prompt: "https://www.tasnimnews.com/fa/news/1391/08/24/92"
-    # It seems ID is 92. Let's try to scrape by ID if possible or we need a strategy.
-    
-    # Strategy: The user provided a specific URL format. 
-    # If we want to loop "from 92 upwards", we need to know if the ID is global unique
-    # or unique per day. Usually CMS IDs are global. 
-    # Let's try to construct URL assuming ID is the main variable, 
-    # but we might need the date. 
-    # Actually, many sites redirect /news/{id} to the full URL.
-    # Let's try a generic approach: iterate IDs and if we need date, we might fail without it.
-    # BUT, let's assume the user wants to iterate the ID at the end: "92".
-    # And keep the date fixed? Or is the ID unique globally?
-    # Let's try to just change the ID. 
-    
-    # For this implementation, I will assume we keep the date fixed as per the example 
-    # OR we try to hit a short link if it exists. 
-    # Let's use the date from the user example for now as a base.
-    # User said: "https://www.tasnimnews.com/fa/news/1391/08/24/92" -> start from 92.
-    
-    url = f"https://www.tasnimnews.com/fa/news/{year}/{month}/{day}/{page_id}"
+    # Use short link for redirection to full URL with date
+    url = f"http://tn.ai/{page_id}"
     html, status = fetch_url(url)
     if html:
+        # After fetch_url (requests.get), the html is the content of the FINAL url.
+        # But we need the final URL to pass to parse_html? 
+        # fetch_url returns text, status. It doesn't return the final URL.
+        # parse_html might need the final URL? 
+        # Actually tasnim_scraper.parse_html uses url mainly for metadata.
+        # But if the HTML is valid, it should work.
+        
+        # However, fetch_url in scraper.py does: response = requests.get(url, ...)
+        # It follows redirects by default.
+        # So 'html' is the content of the final page.
         data = tasnim_scraper.parse_html(html, page_id, url)
         if data:
             return data
+        else:
+            # print(f"Tasnim Parse Error for {url}")
+            pass
     elif status != 404:
+        # print(f"Tasnim Fetch Error {url}: {status}")
         pass
     return None
 
 def run_tasnim(start, count, output):
-    # Hardcoded date based on user example for now. 
-    # In a real scenario, we might want these as args, but let's stick to the request.
-    year, month, day = "1391", "08", "24"
-    
-    print(f"--- Running Tasnim Scraper (Starting from ID {start}, Date: {year}/{month}/{day}, Count: {count}) ---")
+    print(f"--- Running Tasnim Scraper (Starting from ID {start}, Count: {count}) ---")
     
     results = []
     page_ids = range(start, start + count)
+    
+    # Dummy date args not needed for simple ID url but kept for signature if needed later
+    year, month, day = "0", "0", "0"
     
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         future_to_page = {executor.submit(process_tasnim_page, pid, year, month, day): pid for pid in page_ids}
