@@ -28,6 +28,7 @@ try:
     import banki_news
     import fararu_scraper
     import tasnim_scraper
+    import mehr_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -618,13 +619,44 @@ def run_tasnim(start, count, output):
     save_batch(results, output)
 
 # -------------------------------------------------------------------------
+# Mehr News Runner
+# -------------------------------------------------------------------------
+def process_mehr_page(page_id):
+    url = f"https://www.mehrnews.com/news/{page_id}"
+    html, status = fetch_url(url)
+    if html:
+        data = mehr_scraper.parse_html(html, page_id, url)
+        if data:
+            return data
+    elif status != 404:
+        pass
+    return None
+
+def run_mehr(start, count, output):
+    print(f"--- Running Mehr News Scraper (Starting from ID {start}, Count: {count}) ---")
+    
+    results = []
+    page_ids = range(start, start + count)
+    
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_page = {executor.submit(process_mehr_page, pid): pid for pid in page_ids}
+        
+        for future in as_completed(future_to_page):
+            data = future.result()
+            if data:
+                results.append(data)
+                print(f"Extracted: {data.get('Title', 'No Title')[:30]}")
+                
+    save_batch(results, output)
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -673,6 +705,10 @@ def main():
     elif args.site == 'tasnim':
         out = args.output if args.output else "tasnim.xlsx"
         run_tasnim(args.start, args.count, out)
+
+    elif args.site == 'mehr':
+        out = args.output if args.output else "mehr.xlsx"
+        run_mehr(args.start, args.count, out)
 
 if __name__ == "__main__":
     main()

@@ -21,6 +21,7 @@
 8.  **اخبار بانک** (`--site banki`)
 9.  **فرارو** (`--site fararu`)
 10. **تسنیم** (`--site tasnim`)
+11. **مهر** (`--site mehr`)
 
 ## پیش‌نیازها
 
@@ -124,6 +125,14 @@ python scraper.py --site fararu --start 700000 --count 10
 
 ```bash
 python scraper.py --site tasnim --start 92 --count 5
+```
+
+### ۱۱. اسکرپر مهر (mehr)
+استخراج اخبار خبرگزاری مهر بر اساس شناسه (ID).
+*اطلاعات از کلاس‌های `item-header` و `item-body` استخراج می‌شود.*
+
+```bash
+python scraper.py --site mehr --start 6000000 --count 10
 ```
 
 ## ستون‌های خروجی
