@@ -19,6 +19,7 @@
 6.  **ایران آنلاین** (`--site inn`)
 7.  **آرمان امروز** (`--site armandaily`)
 8.  **اخبار بانک** (`--site banki`)
+9.  **فرارو** (`--site fararu`)
 
 ## پیش‌نیازها
 
@@ -107,6 +108,13 @@ python scraper.py --site armandaily --start 1 --count 5
 
 ```bash
 python scraper.py --site banki --start 100 --count 10
+```
+
+### ۹. اسکرپر فرارو (fararu)
+استخراج اخبار بر اساس شناسه (ID) صفحه.
+
+```bash
+python scraper.py --site fararu --start 700000 --count 10
 ```
 
 ## ستون‌های خروجی
