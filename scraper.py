@@ -33,6 +33,7 @@ try:
     import mehr_scraper
     import mashregh_scraper
     import euronews_scraper
+    import twitter_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -797,7 +798,7 @@ def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews', 'manotonews_x'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -858,6 +859,12 @@ def main():
     elif args.site == 'euronews':
         out = args.output if args.output else "euronews.xlsx"
         run_euronews(args.start, args.count, out)
+
+    elif args.site == 'manotonews_x':
+        out = args.output if args.output else "manotonews_x.xlsx"
+        # For Manoto, we default to ManotoNews user, but could be flexible
+        # args.count is used for number of tweets
+        twitter_scraper.scrape_twitter_profile("ManotoNews", args.count, headless=False, output_file=out)
 
 if __name__ == "__main__":
     main()

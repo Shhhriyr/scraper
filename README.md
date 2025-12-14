@@ -24,10 +24,14 @@
 9.  **فرارو** (`--site fararu`)
 10. **تسنیم** (`--site tasnim`)
 11. **مهر** (`--site mehr`)
+12. **مشرق** (`--site mashregh`)
+13. **یورونیوز فارسی** (`--site euronews`)
+14. **منوتو (توییتر)** (`--site manotonews_x`)
 
 ## پیش‌نیازها
 
 *   Python 3.8+
+*   Google Chrome (برای اسکرپر Manoto/Twitter)
 *   وابستگی‌های پایتون موجود در `requirements.txt`.
 
 ## نصب
@@ -95,8 +99,30 @@ python scraper.py --site wiki
 python scraper.py --site inn --start 43712 --count 10
 ```
 
-### ۷. اسکرپر آرمان امروز (armandaily)
-استخراج اخبار از لیست صفحات دسته‌بندی.
+### ۱۲. اسکرپر مشرق (mashregh)
+استخراج اخبار بر اساس شناسه صفحه.
+
+```bash
+python scraper.py --site mashregh --start 1 --count 10
+```
+
+### ۱۳. اسکرپر یورونیوز (euronews)
+استخراج آرشیو اخبار بر اساس تاریخ.
+
+```bash
+python scraper.py --site euronews --start 20240101 --count 10
+```
+*   `--start`: تاریخ شروع به فرمت YYYYMMDD.
+*   `--count`: تعداد روزهای بعد از تاریخ شروع.
+
+### ۱۴. اسکرپر منوتو (توییتر)
+استخراج آخرین توییت‌ها/اخبار از صفحه X (توییتر) منوتو.
+
+```bash
+python scraper.py --site manotonews_x --count 50 --output manoto.xlsx
+```
+*   این اسکرپر از Selenium استفاده می‌کند و یک پنجره مرورگر باز خواهد کرد.
+*   اگر نیاز به لاگین باشد، ۳۰ ثانیه فرصت دارید تا دستی وارد شوید.
 
 ```bash
 python scraper.py --site armandaily --start 0 --count 5
