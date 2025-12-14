@@ -27,6 +27,7 @@
 12. **مشرق** (`--site mashregh`)
 13. **یورونیوز فارسی** (`--site euronews`)
 14. **منوتو (توییتر)** (`--site manotonews_x`)
+15. **صدای آمریکا** (`--site voa`)
 
 ## پیش‌نیازها
 
@@ -99,39 +100,8 @@ python scraper.py --site wiki
 python scraper.py --site inn --start 43712 --count 10
 ```
 
-### ۱۲. اسکرپر مشرق (mashregh)
-استخراج اخبار بر اساس شناسه صفحه.
-
-```bash
-python scraper.py --site mashregh --start 1 --count 10
-```
-
-### ۱۳. اسکرپر یورونیوز (euronews)
-استخراج آرشیو اخبار بر اساس تاریخ.
-
-```bash
-python scraper.py --site euronews --start 20240101 --count 10
-```
-*   `--start`: تاریخ شروع به فرمت YYYYMMDD.
-*   `--count`: تعداد روزهای بعد از تاریخ شروع.
-
-### ۱۴. اسکرپر منوتو (توییتر)
-استخراج آخرین توییت‌ها/اخبار از صفحه X (توییتر) منوتو.
-
-```bash
-python scraper.py --site manotonews_x --count 50 --output manoto.xlsx
-```
-*   این اسکرپر از Selenium استفاده می‌کند و یک پنجره مرورگر باز خواهد کرد.
-*   اگر نیاز به لاگین باشد، ۳۰ ثانیه فرصت دارید تا دستی وارد شوید.
-
-### ۱۵. اسکرپر صدای آمریکا (VOA)
-استخراج اخبار از بخش ایران صدای آمریکا.
-
-```bash
-python scraper.py --site voa --start 1 --count 5
-```
-*   `--start`: شماره صفحه شروع (از ۱).
-*   `--count`: تعداد صفحاتی که باید اسکرپ شوند.
+### ۷. اسکرپر آرمان امروز (armandaily)
+استخراج اخبار بر اساس شماره صفحه آرشیو.
 
 ```bash
 python scraper.py --site armandaily --start 0 --count 5
@@ -167,6 +137,40 @@ python scraper.py --site tasnim --start 3470177 --count 10
 ```bash
 python scraper.py --site mehr --start 6687686 --count 10
 ```
+
+### ۱۲. اسکرپر مشرق (mashregh)
+استخراج اخبار بر اساس شناسه صفحه.
+
+```bash
+python scraper.py --site mashregh --start 1 --count 10
+```
+
+### ۱۳. اسکرپر یورونیوز (euronews)
+استخراج آرشیو اخبار بر اساس تاریخ.
+
+```bash
+python scraper.py --site euronews --start 20240101 --count 10
+```
+*   `--start`: تاریخ شروع به فرمت YYYYMMDD.
+*   `--count`: تعداد روزهای بعد از تاریخ شروع.
+
+### ۱۴. اسکرپر منوتو (توییتر)
+استخراج آخرین توییت‌ها/اخبار از صفحه X (توییتر) منوتو.
+
+```bash
+python scraper.py --site manotonews_x --count 50 --output manoto.xlsx
+```
+*   این اسکرپر از Selenium استفاده می‌کند و یک پنجره مرورگر باز خواهد کرد.
+*   اگر نیاز به لاگین باشد، ۳۰ ثانیه فرصت دارید تا دستی وارد شوید.
+
+### ۱۵. اسکرپر صدای آمریکا (VOA)
+استخراج اخبار از بخش ایران صدای آمریکا.
+
+```bash
+python scraper.py --site voa --start 1 --count 5
+```
+*   `--start`: شماره صفحه شروع (از ۱).
+*   `--count`: تعداد صفحاتی که باید اسکرپ شوند.
 
 ## ستون‌های خروجی
 فایل اکسل خروجی شامل ستون‌های زیر است:
