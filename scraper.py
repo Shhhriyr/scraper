@@ -764,9 +764,9 @@ def run_euronews(start_date_int, count_days, output):
     
     results = []
     
-    for _ in range(count_days):
+    for i in range(count_days):
         date_str = current_date.strftime("%Y/%m/%d")
-        print(f"Processing Date: {date_str}")
+        print(f"Processing Date: {date_str} ({i+1}/{count_days})")
         
         day_results = process_euronews_day(date_str)
         if day_results:
@@ -780,7 +780,14 @@ def run_euronews(start_date_int, count_days, output):
             
         current_date += timedelta(days=1)
         
-    save_batch(results, output)
+        # Save every 30 days to avoid memory issues and data loss
+        if (i + 1) % 30 == 0:
+            print(f"Auto-saving batch after {i+1} days...")
+            save_batch(results, output)
+            results = [] # Clear memory
+
+    if results:
+        save_batch(results, output)
 
 
 # -------------------------------------------------------------------------
