@@ -34,6 +34,7 @@ try:
     import mashregh_scraper
     import euronews_scraper
     import twitter_scraper
+    import voa_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -792,13 +793,67 @@ def run_euronews(start_date_int, count_days, output):
 
 
 # -------------------------------------------------------------------------
+# VOA Runner
+# -------------------------------------------------------------------------
+def process_voa_article(item):
+    html, status = fetch_url(item['Link'])
+    if html:
+        details = voa_scraper.parse_article_page(html, item['Link'])
+        if details:
+            # Merge details
+            item.update(details)
+            item['Scraped_Date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            return item
+    return None
+
+def run_voa(start_page, count_pages, output):
+    print(f"--- Running VOA News Scraper (Starting from Page {start_page}, Count: {count_pages}) ---")
+    
+    all_results = []
+    
+    for i in range(count_pages):
+        page_num = start_page + i
+        url = f"https://ir.voanews.com/iran-news?p={page_num}"
+        print(f"Processing Page {page_num}: {url}")
+        
+        html, status = fetch_url(url)
+        if not html:
+            print("  Failed to fetch page.")
+            continue
+            
+        items = voa_scraper.parse_list_page(html)
+        print(f"  Found {len(items)} items.")
+        
+        if not items:
+            print("  No items found. Stopping.")
+            break
+            
+        # Parallel Fetch Articles
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = [executor.submit(process_voa_article, item) for item in items]
+            
+            for future in as_completed(futures):
+                res = future.result()
+                if res:
+                    all_results.append(res)
+                    print(f"    Extracted: {res.get('Title', 'No Title')[:40]}")
+        
+        # Auto-save every 5 pages
+        if (i + 1) % 5 == 0:
+            save_batch(all_results, output)
+            all_results = []
+            
+    save_batch(all_results, output)
+
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews', 'manotonews_x'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews', 'manotonews_x', 'voa'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -865,6 +920,10 @@ def main():
         # For Manoto, we default to ManotoNews user, but could be flexible
         # args.count is used for number of tweets
         twitter_scraper.scrape_twitter_profile("ManotoNews", args.count, headless=False, output_file=out)
+
+    elif args.site == 'voa':
+        out = args.output if args.output else "voa_news.xlsx"
+        run_voa(args.start, args.count, out)
 
 if __name__ == "__main__":
     main()

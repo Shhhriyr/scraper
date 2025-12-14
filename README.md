@@ -124,6 +124,15 @@ python scraper.py --site manotonews_x --count 50 --output manoto.xlsx
 *   این اسکرپر از Selenium استفاده می‌کند و یک پنجره مرورگر باز خواهد کرد.
 *   اگر نیاز به لاگین باشد، ۳۰ ثانیه فرصت دارید تا دستی وارد شوید.
 
+### ۱۵. اسکرپر صدای آمریکا (VOA)
+استخراج اخبار از بخش ایران صدای آمریکا.
+
+```bash
+python scraper.py --site voa --start 1 --count 5
+```
+*   `--start`: شماره صفحه شروع (از ۱).
+*   `--count`: تعداد صفحاتی که باید اسکرپ شوند.
+
 ```bash
 python scraper.py --site armandaily --start 0 --count 5
 ```
