@@ -3,10 +3,11 @@ import requests
 import time
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import jdatetime
 import cloudscraper
+from bs4 import BeautifulSoup
 
 # Import for Keyword Extraction
 try:
@@ -31,6 +32,7 @@ try:
     import tasnim_scraper
     import mehr_scraper
     import mashregh_scraper
+    import euronews_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -690,13 +692,105 @@ def run_mashregh(start, count, output):
 
 
 # -------------------------------------------------------------------------
+# Euronews Runner
+# -------------------------------------------------------------------------
+def process_euronews_article(url):
+    html, status = fetch_url(url)
+    if html:
+        return euronews_scraper.parse_html(html, 0, url)
+    return None
+
+def process_euronews_day(date_str):
+    # date_str format: YYYY/MM/DD
+    url = f"https://parsi.euronews.com/{date_str}"
+    html, status = fetch_url(url)
+    articles = []
+    if html:
+        soup = BeautifulSoup(html, 'html.parser')
+        links = []
+        BASE_URL = "https://parsi.euronews.com"
+        target_parts = date_str.split('/')
+        target_date_path = "/".join(target_parts)
+
+        for a in soup.find_all("a"):
+            href = a.get("href")
+            if href and target_date_path in href:
+                 path = href
+                 if path.startswith("http"):
+                     path = path.replace(BASE_URL, "")
+                     if path.startswith("http"): continue
+                     
+                 parts = path.strip('/').split('/')
+                 # Check if it is an article (has slug after date)
+                 # Date parts are 3. If prefix exists, we need to be careful.
+                 # Generally, if it ends with the date, it's a list.
+                 # If it has something AFTER the date, it's an article.
+                 
+                 # Find where date starts in parts
+                 try:
+                     date_idx = -1
+                     for i in range(len(parts)-2):
+                         if parts[i] == target_parts[0] and parts[i+1] == target_parts[1] and parts[i+2] == target_parts[2]:
+                             date_idx = i
+                             break
+                     
+                     if date_idx != -1:
+                         # Check if there is something after date
+                         if len(parts) > date_idx + 3 and parts[-1] not in ['video', 'program']:
+                             full_link = BASE_URL + path if path.startswith('/') else BASE_URL + '/' + path
+                             if full_link not in links:
+                                 links.append(full_link)
+                 except:
+                     pass
+        
+        # Parallel fetch for articles in a day
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            future_to_url = {executor.submit(process_euronews_article, link): link for link in links}
+            for future in as_completed(future_to_url):
+                data = future.result()
+                if data:
+                    articles.append(data)
+                    
+    return articles
+
+def run_euronews(start_date_int, count_days, output):
+    print(f"--- Running Euronews Scraper (Starting from {start_date_int}, Count: {count_days} days) ---")
+    try:
+        s_str = str(start_date_int)
+        current_date = datetime.strptime(s_str, "%Y%m%d")
+    except ValueError:
+        print("Error: Start date must be YYYYMMDD (e.g. 20240101)")
+        return
+    
+    results = []
+    
+    for _ in range(count_days):
+        date_str = current_date.strftime("%Y/%m/%d")
+        print(f"Processing Date: {date_str}")
+        
+        day_results = process_euronews_day(date_str)
+        if day_results:
+            results.extend(day_results)
+            print(f"  Found {len(day_results)} articles.")
+            for item in day_results:
+                 t = item.get('Title') or "No Title"
+                 print(f"    - {t[:40]}")
+        else:
+            print(f"  No articles found.")
+            
+        current_date += timedelta(days=1)
+        
+    save_batch(results, output)
+
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -753,6 +847,10 @@ def main():
     elif args.site == 'mashregh':
         out = args.output if args.output else "mashregh.xlsx"
         run_mashregh(args.start, args.count, out)
+
+    elif args.site == 'euronews':
+        out = args.output if args.output else "euronews.xlsx"
+        run_euronews(args.start, args.count, out)
 
 if __name__ == "__main__":
     main()
