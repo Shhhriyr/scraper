@@ -1,3 +1,4 @@
+cloudscraper>=1.2.71
 beautifulsoup4>=4.11.0
 hazm>=0.7.0
 jdatetime>=4.1.0

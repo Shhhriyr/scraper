@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import jdatetime
+import cloudscraper
 
 # Import for Keyword Extraction
 try:
@@ -29,6 +30,7 @@ try:
     import fararu_scraper
     import tasnim_scraper
     import mehr_scraper
+    import mashregh_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -39,13 +41,24 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
-def fetch_url(url, retries=3):
+def fetch_url(url, retries=3, use_cloudscraper=False):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
+    
+    scraper = None
+    if use_cloudscraper:
+        scraper = cloudscraper.create_scraper(
+             browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+        )
+
     for attempt in range(retries):
         try:
-            response = requests.get(url, headers=headers, timeout=30)
+            if use_cloudscraper:
+                response = scraper.get(url, timeout=30)
+            else:
+                response = requests.get(url, headers=headers, timeout=30)
+                
             if response.status_code == 200:
                 return response.text, 200
             elif response.status_code == 404:
@@ -53,7 +66,7 @@ def fetch_url(url, retries=3):
             else:
                 # print(f"Error fetching {url}: Status {response.status_code}")
                 pass
-        except requests.RequestException as e:
+        except Exception as e:
             # print(f"Request error for {url}: {e}")
             pass
         time.sleep(1)
@@ -636,13 +649,54 @@ def run_mehr(start, count, output):
     save_batch(results, output)
 
 # -------------------------------------------------------------------------
+# Mashregh Runner
+# -------------------------------------------------------------------------
+def process_mashregh_page(page_id):
+    # Try short link first (redirects usually)
+    url = f"https://mshrgh.ir/{page_id}"
+    
+    # Use cloudscraper=True
+    html, status = fetch_url(url, use_cloudscraper=True)
+    
+    if not html:
+        # Try full URL
+        url = f"https://www.mashreghnews.ir/news/{page_id}"
+        html, status = fetch_url(url, use_cloudscraper=True)
+        
+    if html:
+        data = mashregh_scraper.parse_html(html, page_id, url)
+        if data and data.get('Title'):
+            return data
+    elif status != 404:
+        pass
+    return None
+
+def run_mashregh(start, count, output):
+    print(f"--- Running Mashregh Scraper (Starting from ID {start}, Count: {count}) ---")
+    
+    results = []
+    page_ids = range(start, start + count)
+    
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        future_to_page = {executor.submit(process_mashregh_page, pid): pid for pid in page_ids}
+        
+        for future in as_completed(future_to_page):
+            data = future.result()
+            if data:
+                results.append(data)
+                print(f"Extracted: {data.get('Title', 'No Title')[:30]}")
+                
+    save_batch(results, output)
+
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -695,6 +749,10 @@ def main():
     elif args.site == 'mehr':
         out = args.output if args.output else "mehr.xlsx"
         run_mehr(args.start, args.count, out)
+
+    elif args.site == 'mashregh':
+        out = args.output if args.output else "mashregh.xlsx"
+        run_mashregh(args.start, args.count, out)
 
 if __name__ == "__main__":
     main()
