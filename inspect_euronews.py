@@ -144,8 +144,13 @@ def inspect_article(url):
         print("Body not found.")
 
 if __name__ == "__main__":
+    import sys
     # Test specific day
-    day = "2010/11/03"
+    if len(sys.argv) > 1:
+        day = sys.argv[1]
+    else:
+        day = "2010/11/03"
+
     url = f"{BASE_URL}/{day}"
     print(f"Inspecting Day: {url}")
     articles = inspect_day(url)
