@@ -36,6 +36,7 @@ try:
     import twitter_scraper
     import voa_scraper
     import iranintl_scraper
+    import bbc_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -907,13 +908,79 @@ def run_iranintl(category, start_page, count_pages, output):
 
 
 # -------------------------------------------------------------------------
+# BBC Persian Runner
+# -------------------------------------------------------------------------
+def process_bbc_article(item):
+    html, status = fetch_url(item['Link'])
+    if html:
+        details = bbc_scraper.parse_article_page(html, item['Link'])
+        if details:
+            item.update(details)
+            item['Scraped_Date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            return item
+    return None
+
+def run_bbc(category, start_page, count_pages, output):
+    print(f"--- Running BBC Persian Scraper ({category}, Start Page: {start_page}, Count: {count_pages}) ---")
+    
+    # Map category to Topic ID
+    topics = {
+        'iran': 'ckdxnwvwwjnt',
+        'world': 'c1d8ye58xl8t',
+        'arts': 'c9wpm0epm45t',
+        'sport': 'cnq6879k7yjt',
+        'economy': 'cl8l9mvlllqt',
+        'science': 'ckdxnwr4r1yt',
+        'afghanistan': 'cvjp23v3083t'
+    }
+    topic_id = topics.get(category, 'ckdxnwvwwjnt')
+    
+    all_results = []
+    
+    for i in range(count_pages):
+        page_num = start_page + i
+        # BBC Pagination usually uses ?page=X
+        url = f"https://www.bbc.com/persian/topics/{topic_id}?page={page_num}"
+        print(f"Processing Page {page_num}: {url}")
+        
+        html, status = fetch_url(url)
+        if not html:
+            print("  Failed to fetch page.")
+            continue
+            
+        items = bbc_scraper.parse_list_page(html)
+        print(f"  Found {len(items)} items.")
+        
+        if not items:
+            print("  No items found. Stopping.")
+            break
+            
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = [executor.submit(process_bbc_article, item) for item in items]
+            
+            for future in as_completed(futures):
+                res = future.result()
+                if res:
+                    all_results.append(res)
+                    print(f"    Extracted: {res.get('Title', 'No Title')[:40]}")
+        
+        if (i + 1) % 5 == 0:
+            save_batch(all_results, output)
+            all_results = []
+            
+    save_batch(all_results, output)
+
+
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews', 'manotonews_x', 'voa', 'iranintl_iran', 'iranintl_world', 'iranintl_humanright'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews', 'manotonews_x', 'voa', 'iranintl_iran', 'iranintl_world', 'iranintl_humanright',
+                                 'bbc_iran', 'bbc_world', 'bbc_arts', 'bbc_sport', 'bbc_economy', 'bbc_science', 'bbc_afghanistan'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -996,6 +1063,35 @@ def main():
     elif args.site == 'iranintl_humanright':
         out_name = args.output if args.output else f"iranintl_humanrights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         run_iranintl('human-rights', args.start, args.count, out_name)
+
+    # BBC
+    elif args.site == 'bbc_iran':
+        out_name = args.output if args.output else f"bbc_iran_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_bbc('iran', args.start, args.count, out_name)
+
+    elif args.site == 'bbc_world':
+        out_name = args.output if args.output else f"bbc_world_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_bbc('world', args.start, args.count, out_name)
+
+    elif args.site == 'bbc_arts':
+        out_name = args.output if args.output else f"bbc_arts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_bbc('arts', args.start, args.count, out_name)
+
+    elif args.site == 'bbc_sport':
+        out_name = args.output if args.output else f"bbc_sport_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_bbc('sport', args.start, args.count, out_name)
+
+    elif args.site == 'bbc_economy':
+        out_name = args.output if args.output else f"bbc_economy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_bbc('economy', args.start, args.count, out_name)
+
+    elif args.site == 'bbc_science':
+        out_name = args.output if args.output else f"bbc_science_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_bbc('science', args.start, args.count, out_name)
+
+    elif args.site == 'bbc_afghanistan':
+        out_name = args.output if args.output else f"bbc_afghanistan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_bbc('afghanistan', args.start, args.count, out_name)
 
 if __name__ == "__main__":
     main()

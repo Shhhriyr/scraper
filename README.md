@@ -31,6 +31,13 @@
 16. **ایران اینترنشنال (ایران)** (`--site iranintl_iran`)
 17. **ایران اینترنشنال (جهان)** (`--site iranintl_world`)
 18. **ایران اینترنشنال (حقوق بشر)** (`--site iranintl_humanright`)
+19. **بی‌بی‌سی فارسی (ایران)** (`--site bbc_iran`)
+20. **بی‌بی‌سی فارسی (جهان)** (`--site bbc_world`)
+21. **بی‌بی‌سی فارسی (هنر)** (`--site bbc_arts`)
+22. **بی‌بی‌سی فارسی (ورزش)** (`--site bbc_sport`)
+23. **بی‌بی‌سی فارسی (اقتصاد)** (`--site bbc_economy`)
+24. **بی‌بی‌سی فارسی (علمی)** (`--site bbc_science`)
+25. **بی‌بی‌سی فارسی (افغانستان)** (`--site bbc_afghanistan`)
 
 ## پیش‌نیازها
 
@@ -190,6 +197,19 @@ python scraper.py --site iranintl_humanright --start 1 --count 5
 ```
 *   `--start`: شماره صفحه شروع (از ۱).
 *   `--count`: تعداد صفحاتی که باید اسکرپ شوند.
+
+### ۱۷. اسکرپر بی‌بی‌سی فارسی (BBC Persian)
+استخراج اخبار از بخش‌های مختلف بی‌بی‌سی فارسی.
+
+```bash
+# بخش ایران
+python scraper.py --site bbc_iran --start 1 --count 5
+
+# بخش جهان
+python scraper.py --site bbc_world --start 1 --count 5
+
+# سایر بخش‌ها: bbc_arts, bbc_sport, bbc_economy, bbc_science, bbc_afghanistan
+```
 
 ## ستون‌های خروجی
 فایل اکسل خروجی شامل ستون‌های زیر است:
