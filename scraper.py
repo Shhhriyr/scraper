@@ -35,6 +35,7 @@ try:
     import euronews_scraper
     import twitter_scraper
     import voa_scraper
+    import iranintl_scraper
 except ImportError as e:
     print(f"Error importing modules: {e}")
 
@@ -847,13 +848,72 @@ def run_voa(start_page, count_pages, output):
 
 
 # -------------------------------------------------------------------------
+# Iran International Runner
+# -------------------------------------------------------------------------
+def process_iranintl_article(item):
+    html, status = fetch_url(item['Link'])
+    if html:
+        details = iranintl_scraper.parse_article_page(html, item['Link'])
+        if details:
+            item.update(details)
+            item['Scraped_Date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            return item
+    return None
+
+def run_iranintl(category, start_page, count_pages, output):
+    print(f"--- Running Iran International Scraper ({category}, Start Page: {start_page}, Count: {count_pages}) ---")
+    
+    # Map category to URL path
+    paths = {
+        'iran': 'iran',
+        'world': 'world',
+        'human-rights': 'human-rights'
+    }
+    path = paths.get(category, 'iran')
+    
+    all_results = []
+    
+    for i in range(count_pages):
+        page_num = start_page + i
+        url = f"https://www.iranintl.com/{path}?page={page_num}"
+        print(f"Processing Page {page_num}: {url}")
+        
+        html, status = fetch_url(url)
+        if not html:
+            print("  Failed to fetch page.")
+            continue
+            
+        items = iranintl_scraper.parse_list_page(html)
+        print(f"  Found {len(items)} items.")
+        
+        if not items:
+            print("  No items found. Stopping.")
+            break
+            
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = [executor.submit(process_iranintl_article, item) for item in items]
+            
+            for future in as_completed(futures):
+                res = future.result()
+                if res:
+                    all_results.append(res)
+                    print(f"    Extracted: {res.get('Title', 'No Title')[:40]}")
+        
+        if (i + 1) % 5 == 0:
+            save_batch(all_results, output)
+            all_results = []
+            
+    save_batch(all_results, output)
+
+
+# -------------------------------------------------------------------------
 # Main Entry Point
 # -------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="Unified Persian News Scraper")
     
     parser.add_argument('--site', type=str, required=True, 
-                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews', 'manotonews_x', 'voa'],
+                        choices=['hamshahri', 'kayhan', 'ettelaat', 'asianews', 'wiki', 'inn', 'armandaily', 'banki', 'fararu', 'tasnim', 'mehr', 'mashregh', 'euronews', 'manotonews_x', 'voa', 'iranintl_iran', 'iranintl_world', 'iranintl_humanright'],
                         help='Site to scrape')
     
     parser.add_argument('--start', type=int, default=1, help='Start ID/Page')
@@ -922,8 +982,20 @@ def main():
         twitter_scraper.scrape_twitter_profile("ManotoNews", args.count, headless=False, output_file=out)
 
     elif args.site == 'voa':
-        out = args.output if args.output else "voa_news.xlsx"
-        run_voa(args.start, args.count, out)
+        out_name = args.output if args.output else f"voa_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_voa(args.start, args.count, out_name)
+
+    elif args.site == 'iranintl_iran':
+        out_name = args.output if args.output else f"iranintl_iran_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_iranintl('iran', args.start, args.count, out_name)
+
+    elif args.site == 'iranintl_world':
+        out_name = args.output if args.output else f"iranintl_world_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_iranintl('world', args.start, args.count, out_name)
+
+    elif args.site == 'iranintl_humanright':
+        out_name = args.output if args.output else f"iranintl_humanrights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        run_iranintl('human-rights', args.start, args.count, out_name)
 
 if __name__ == "__main__":
     main()

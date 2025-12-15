@@ -28,6 +28,9 @@
 13. **یورونیوز فارسی** (`--site euronews`)
 14. **منوتو (توییتر)** (`--site manotonews_x`)
 15. **صدای آمریکا** (`--site voa`)
+16. **ایران اینترنشنال (ایران)** (`--site iranintl_iran`)
+17. **ایران اینترنشنال (جهان)** (`--site iranintl_world`)
+18. **ایران اینترنشنال (حقوق بشر)** (`--site iranintl_humanright`)
 
 ## پیش‌نیازها
 
@@ -168,6 +171,22 @@ python scraper.py --site manotonews_x --count 50 --output manoto.xlsx
 
 ```bash
 python scraper.py --site voa --start 1 --count 5
+```
+*   `--start`: شماره صفحه شروع (از ۱).
+*   `--count`: تعداد صفحاتی که باید اسکرپ شوند.
+
+### ۱۶. اسکرپر ایران اینترنشنال
+استخراج اخبار از بخش‌های مختلف ایران اینترنشنال.
+
+```bash
+# بخش ایران
+python scraper.py --site iranintl_iran --start 1 --count 5
+
+# بخش جهان
+python scraper.py --site iranintl_world --start 1 --count 5
+
+# بخش حقوق بشر
+python scraper.py --site iranintl_humanright --start 1 --count 5
 ```
 *   `--start`: شماره صفحه شروع (از ۱).
 *   `--count`: تعداد صفحاتی که باید اسکرپ شوند.
